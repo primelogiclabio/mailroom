@@ -1,19 +1,19 @@
 package io.primelogiclab.mailroom;
 
-import jakarta.activation.DataHandler;
-import jakarta.mail.Address;
-import jakarta.mail.Message;
-import jakarta.mail.MessagingException;
-import jakarta.mail.SendFailedException;
-import jakarta.mail.Session;
-import jakarta.mail.Transport;
-import jakarta.mail.internet.AddressException;
-import jakarta.mail.internet.InternetAddress;
-import jakarta.mail.internet.MimeBodyPart;
-import jakarta.mail.internet.MimeMessage;
-import jakarta.mail.internet.MimeMultipart;
-import jakarta.mail.internet.MimePart;
-import jakarta.mail.util.ByteArrayDataSource;
+import javax.activation.DataHandler;
+import javax.mail.Address;
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.SendFailedException;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
+import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
+import javax.mail.internet.MimePart;
+import javax.mail.util.ByteArrayDataSource;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -154,8 +154,8 @@ public class Mailer implements AutoCloseable {
     }
 
     private static boolean isPartiallyDelivered(MessagingException e) {
-        if (e instanceof SendFailedException sfe) {
-            Address[] sent = sfe.getValidSentAddresses();
+        if (e instanceof SendFailedException) {
+            Address[] sent = ((SendFailedException) e).getValidSentAddresses();
             return sent != null && sent.length > 0;
         }
         return false;

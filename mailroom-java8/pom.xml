@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.primelogiclab</groupId>
+        <artifactId>mailroom-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mailroom-java8</artifactId>
+    <packaging>jar</packaging>
+
+    <name>mailroom-java8</name>
+    <description>mailroom for Java 8+ on JavaMail (javax.mail).</description>
+
+    <properties>
+        <!-- 'release' needs JDK 9+, so use source/target to also build on JDK 8. -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <javax.mail.version>1.6.2</javax.mail.version>
+        <junit.version>5.14.4</junit.version>
+        <greenmail.version>1.6.15</greenmail.version>
+    </properties>
+
+    <dependencies>
+        <!-- JavaMail API + implementation (javax.mail namespace) -->
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>${javax.mail.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.icegreen</groupId>
+            <artifactId>greenmail</artifactId>
+            <version>${greenmail.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <profiles>
+        <!-- On JDK 9+, compile against the real Java 8 API so Java 9+ calls fail the build. -->
+        <profile>
+            <id>release-8</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.release>8</maven.compiler.release>
+            </properties>
+        </profile>
+    </profiles>
+</project>

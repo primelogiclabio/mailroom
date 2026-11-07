@@ -5,9 +5,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.primelogiclab</groupId>
-    <artifactId>mailroom</artifactId>
+    <artifactId>mailroom-parent</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
 
     <name>mailroom</name>
     <description>Java SMTP mailing library with connection reuse, STARTTLS/TLS and automatic retry.</description>
@@ -25,43 +25,42 @@
         <connection>scm:git:https://github.com/primelogiclabio/mailroom.git</connection>
     </scm>
 
+    <!--
+      Two builds of the same API:
+        mailroom-java8   Java 8+,  javax.mail   (Spring Boot 2, Java EE 8)
+        mailroom-java21  Java 21+, jakarta.mail (Spring Boot 3, Jakarta EE 9+)
+      Each module must be built with a JDK it supports; on JDK 8 build only
+      mailroom-java8:  mvn -pl mailroom-java8 -am verify
+    -->
+    <modules>
+        <module>mailroom-java8</module>
+        <module>mailroom-java21</module>
+    </modules>
+
     <properties>
-        <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <angus-mail.version>2.0.3</angus-mail.version>
-        <junit.version>5.11.4</junit.version>
-        <greenmail.version>2.1.2</greenmail.version>
     </properties>
 
-    <dependencies>
-        <!-- Jakarta Mail API + implementation -->
-        <dependency>
-            <groupId>org.eclipse.angus</groupId>
-            <artifactId>angus-mail</artifactId>
-            <version>${angus-mail.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.icegreen</groupId>
-            <artifactId>greenmail-junit5</artifactId>
-            <version>${greenmail.version}</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
     <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version>
-            </plugin>
-        </plugins>
+        <pluginManagement>
+            <!-- Plugin versions that still run on JDK 8. -->
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.4.2</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
 </project>

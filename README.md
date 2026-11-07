@@ -2,7 +2,26 @@
 
 Java SMTP mailing library with connection reuse, STARTTLS/TLS and automatic retry.
 
-Requires Java 17+. Built on Jakarta Mail (Eclipse Angus).
+## Pick your build
+
+Both builds have the same API (`io.primelogiclab.mailroom`); pick the one that matches your Java version and mail namespace.
+
+| Artifact | Java | Mail API | Fits |
+|---|---|---|---|
+| `mailroom-java8` | 8+ | `javax.mail` (JavaMail 1.6) | Spring Boot 2, Java EE 8, Tomcat 9 and older |
+| `mailroom-java21` | 21+ | `jakarta.mail` (Eclipse Angus) | Spring Boot 3+, Jakarta EE 9+, Tomcat 10+ |
+
+`mailroom-java21` also uses a lock instead of `synchronized`, so a shared `Mailer` is safe and efficient to call from virtual threads.
+
+```xml
+<dependency>
+    <groupId>io.primelogiclab</groupId>
+    <artifactId>mailroom-java21</artifactId> <!-- or mailroom-java8 -->
+    <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+## Features
 
 - Plain SMTP, STARTTLS, or implicit TLS (SMTPS)
 - One SMTP connection reused for every email until you close it
@@ -55,18 +74,21 @@ Not retried: invalid emails (bad addresses, fail before any connection), and sen
 
 ## Build
 
+On JDK 21 or newer, build and install both:
+
 ```bash
-mvn test
 mvn install
 ```
 
-```xml
-<dependency>
-    <groupId>io.primelogiclab</groupId>
-    <artifactId>mailroom</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
+On JDK 8, build only the Java 8 module:
+
+```bash
+mvn -pl mailroom-java8 -am install
 ```
+
+The Java 8 module is compiled with `--release 8` on newer JDKs, so any Java 9+ API call fails the build. CI tests each module on its own minimum JDK (8 and 21) on Linux and Windows.
+
+Changes to the library usually need making in both `mailroom-java8/src` and `mailroom-java21/src`.
 
 ## License
 

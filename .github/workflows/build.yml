@@ -11,16 +11,24 @@ permissions:
 
 jobs:
   build:
+    name: ${{ matrix.module }} on ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        include:
+          - module: mailroom-java8
+            java: '8'
+          - module: mailroom-java21
+            java: '21'
+        module: [mailroom-java8, mailroom-java21]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ matrix.java }}
           cache: maven
-      - run: mvn -B verify
+      # Each module is built and tested on the oldest JDK it supports.
+      - run: mvn -B -pl ${{ matrix.module }} -am verify

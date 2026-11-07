@@ -4,7 +4,7 @@ import com.icegreen.greenmail.util.GreenMail;
 import com.icegreen.greenmail.util.GreenMailUtil;
 import com.icegreen.greenmail.util.ServerSetup;
 import com.icegreen.greenmail.util.ServerSetupTest;
-import jakarta.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -63,8 +63,9 @@ class MailerTest {
     void reusesOneConnectionForManyEmails() {
         GreenMail gm = start(ServerSetupTest.SMTP.dynamicPort());
 
-        Mailer mailer = new Mailer(plainConfig(gm.getSmtp().getPort()).build());
-        try (mailer) {
+        Mailer mailer;
+        try (Mailer m = new Mailer(plainConfig(gm.getSmtp().getPort()).build())) {
+            mailer = m;
             for (int i = 0; i < 100; i++) {
                 mailer.send(email("bulk " + i));
             }

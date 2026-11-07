@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.primelogiclab</groupId>
+        <artifactId>mailroom-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mailroom-java21</artifactId>
+    <packaging>jar</packaging>
+
+    <name>mailroom-java21</name>
+    <description>mailroom for Java 21+ on Jakarta Mail (jakarta.mail).</description>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <angus-mail.version>2.0.5</angus-mail.version>
+        <junit.version>6.1.3</junit.version>
+        <greenmail.version>2.1.15</greenmail.version>
+    </properties>
+
+    <dependencies>
+        <!-- Jakarta Mail API + implementation -->
+        <dependency>
+            <groupId>org.eclipse.angus</groupId>
+            <artifactId>angus-mail</artifactId>
+            <version>${angus-mail.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.icegreen</groupId>
+            <artifactId>greenmail</artifactId>
+            <version>${greenmail.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
