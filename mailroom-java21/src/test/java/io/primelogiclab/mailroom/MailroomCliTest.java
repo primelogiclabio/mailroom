@@ -95,6 +95,21 @@ class MailroomCliTest {
     }
 
     @Test
+    void logsInWithOAuth2TokenFromEnvironment() throws Exception {
+        try (FakeXOAuth2Server oauth = new FakeXOAuth2Server("noreply@example.com", "token-123")) {
+            int code = run(Collections.singletonMap(MailroomCli.TOKEN_ENV, "token-123"),
+                    "--host", "localhost", "--port", String.valueOf(oauth.port()), "--security", "none",
+                    "--user", "noreply@example.com", "--oauth2",
+                    "--from", "noreply@example.com", "--to", "alice@example.com");
+
+            assertEquals(0, code, err());
+            assertTrue(out().contains("as noreply@example.com with OAuth 2.0"), out());
+            assertEquals(1, oauth.messages.size());
+            assertEquals(Collections.singletonList("token-123"), oauth.tokensSeen);
+        }
+    }
+
+    @Test
     void reportsFailureWhenServerIsDown() throws Exception {
         int deadPort;
         try (ServerSocket s = new ServerSocket(0)) {
@@ -121,5 +136,8 @@ class MailroomCliTest {
         assertEquals(2, run("--host", "h", "--from", "a@b.c", "--to", "a@b.c", "--port", "abc"));
         assertEquals(2, run("--bogus"));
         assertEquals(2, run("--host"));
+
+        assertEquals(2, run("--host", "h", "--from", "a@b.c", "--to", "a@b.c", "--oauth2"));
+        assertTrue(err().contains("--oauth2 needs --user"), err());
     }
 }

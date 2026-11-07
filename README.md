@@ -88,6 +88,7 @@ If your app already brings in the mail library (for example `spring-boot-starter
 - One SMTP connection reused for every email until you close it
 - `AutoCloseable`: try-with-resources closes the connection
 - Each email is tried up to 3 times (configurable), reconnecting between attempts, before a `MailException` is thrown
+- Password login, or OAuth 2.0 (XOAUTH2) with an access token you supply, for Microsoft 365 and Google
 
 ## Usage
 
@@ -120,6 +121,26 @@ mailer.close();      // the mailer can be reused after close; the next send reco
 ```
 
 One-off email: `Mailer.sendOnce(config, email);`
+
+## OAuth 2.0 (Microsoft 365, Google)
+
+Microsoft 365 is turning off password logins for SMTP, and Google restricts them. Both accept an OAuth 2.0 access token instead. mailroom doesn't fetch tokens itself; give it a function that returns one, for example from your OAuth client library:
+
+```java
+MailConfig config = MailConfig.builder("smtp.office365.com")      // port 587 with STARTTLS, the default
+        .oauth2("noreply@contoso.com", tokenClient::getAccessToken)
+        .build();
+```
+
+mailroom calls the function each time it opens a connection: on the first send, after the server closes an idle connection, and on each retry. So it should return a current token, cached and renewed before it expires, which OAuth client libraries do for you. If the server rejects the token or the function throws, the attempt is retried with a new call. Tokens are never logged.
+
+| Provider | Server | Token |
+|---|---|---|
+| Microsoft 365, as an app (no user sign-in) | `smtp.office365.com`, port 587 | Client credentials grant, scope `https://outlook.office365.com/.default`. The app needs the `SMTP.SendAsApp` permission, and an Exchange admin must register its service principal and grant it each mailbox it sends from |
+| Microsoft 365, as a signed-in user | `smtp.office365.com`, port 587 | Scope `https://outlook.office.com/SMTP.Send`, plus `offline_access` for a refresh token |
+| Google | `smtp.gmail.com`, port 587 (or 465 with `Security.TLS`) | Scope `https://mail.google.com/` |
+
+For Microsoft 365, SMTP AUTH must also be enabled for the sending mailbox. Microsoft's setup steps: [Authenticate an IMAP, POP or SMTP connection using OAuth](https://learn.microsoft.com/en-us/exchange/client-developer/legacy-protocols/how-to-authenticate-an-imap-pop-smtp-application-by-using-oauth).
 
 ## Retry behaviour
 
@@ -188,7 +209,7 @@ It logs the details above at INFO, so they show up without changing log levels, 
 
 What is never logged:
 
-- **Passwords.** The login exchange is replaced by `AUTH LOGIN command trace suppressed`.
+- **Passwords and access tokens.** The login exchange is replaced by a line such as `AUTH LOGIN command trace suppressed`.
 - **Message bodies and attachments.** The body is replaced by `(message body: N line(s), not logged)`.
 
 Email addresses, subjects and headers are logged, so treat debug logs as containing personal data.
@@ -220,6 +241,7 @@ OK: sent 1 email(s) over 1 connection(s) in 812 ms
 | `--port` | Default 25, 587 or 465 to match `--security` |
 | `--security` | `none`, `starttls` (default) or `tls` |
 | `--user` | Log in as this user; password from `MAILROOM_PASSWORD` or a prompt |
+| `--oauth2` | With `--user`: log in with an OAuth 2.0 access token from `MAILROOM_TOKEN` or a prompt, instead of a password |
 | `--subject`, `--text` | Override the default subject and body |
 | `--count <n>` | Send n emails over one connection |
 | `--attempts <n>` | Tries per email (default 3) |
@@ -228,6 +250,27 @@ OK: sent 1 email(s) over 1 connection(s) in 812 ms
 | `--help` | Show all options |
 
 Exit codes: `0` sent, `1` sending failed, `2` bad arguments.
+
+To test an OAuth 2.0 login, put an access token in `MAILROOM_TOKEN` and add `--oauth2`. For example, for Microsoft 365 as an app, using the client credentials grant:
+
+```bash
+export MAILROOM_TOKEN=$(curl -s "https://login.microsoftonline.com/$TENANT_ID/oauth2/v2.0/token" \
+  -d grant_type=client_credentials -d client_id="$CLIENT_ID" --data-urlencode client_secret="$CLIENT_SECRET" \
+  -d scope=https://outlook.office365.com/.default | jq -r .access_token)
+java -cp "mailroom-java21/target/mailroom-java21-0.1.0-SNAPSHOT.jar:mailroom-java21/target/lib/*" \
+  io.primelogiclab.mailroom.MailroomCli \
+  --host smtp.office365.com --user noreply@contoso.com --oauth2 \
+  --from noreply@contoso.com --to you@example.com --verbose
+```
+
+In PowerShell, get the token with:
+
+```powershell
+$body = @{ grant_type = 'client_credentials'; client_id = $clientId; client_secret = $clientSecret; scope = 'https://outlook.office365.com/.default' }
+$env:MAILROOM_TOKEN = (Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token" -Body $body).access_token
+```
+
+Tokens expire after about an hour.
 
 ## Build and test
 
