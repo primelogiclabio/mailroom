@@ -29,6 +29,7 @@ public final class MailConfig {
     private final int maxAttempts;
     private final Duration retryDelay;
     private final String sslTrust;
+    private final boolean debug;
     private final Properties extraProperties;
 
     private MailConfig(Builder b) {
@@ -42,6 +43,7 @@ public final class MailConfig {
         this.maxAttempts = b.maxAttempts;
         this.retryDelay = b.retryDelay;
         this.sslTrust = b.sslTrust;
+        this.debug = b.debug;
         this.extraProperties = new Properties();
         this.extraProperties.putAll(b.extraProperties);
     }
@@ -67,6 +69,8 @@ public final class MailConfig {
     public Duration readTimeout() { return readTimeout; }
     public int maxAttempts() { return maxAttempts; }
     public Duration retryDelay() { return retryDelay; }
+    /** Whether connection details and the SMTP conversation are logged at INFO. */
+    public boolean debug() { return debug; }
 
     String password() { return password; }
 
@@ -106,7 +110,7 @@ public final class MailConfig {
     public String toString() {
         return "MailConfig{" + security + "://" + host + ":" + port
                 + (hasCredentials() ? ", user=" + username : "")
-                + ", maxAttempts=" + maxAttempts + "}";
+                + ", maxAttempts=" + maxAttempts + (debug ? ", debug" : "") + "}";
     }
 
     public static final class Builder {
@@ -120,6 +124,7 @@ public final class MailConfig {
         private int maxAttempts = DEFAULT_MAX_ATTEMPTS;
         private Duration retryDelay = Duration.ofSeconds(1);
         private String sslTrust;
+        private boolean debug;
         private final Properties extraProperties = new Properties();
 
         private Builder(String host) {
@@ -186,6 +191,17 @@ public final class MailConfig {
          */
         public Builder sslTrust(String hosts) {
             this.sslTrust = hosts;
+            return this;
+        }
+
+        /**
+         * Logs connection details, each email sent with the server's reply, and the SMTP conversation,
+         * all at INFO so they show up without changing log levels. Use while setting up or diagnosing
+         * a mail server. Passwords are never logged. Defaults to false; without it the same details
+         * (but not the SMTP conversation) are logged at FINE (DEBUG).
+         */
+        public Builder debug(boolean debug) {
+            this.debug = debug;
             return this;
         }
 
