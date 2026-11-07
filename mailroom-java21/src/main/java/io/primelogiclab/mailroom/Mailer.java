@@ -14,7 +14,11 @@ import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeMultipart;
 import jakarta.mail.internet.MimePart;
 import jakarta.mail.util.ByteArrayDataSource;
+import org.eclipse.angus.mail.smtp.SMTPTransport;
 
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
@@ -46,22 +50,42 @@ import java.util.logging.Logger;
  *
  * <p>After {@link #close()} the mailer can be used again; the next send opens a new connection.
  * Instances are thread-safe, including from virtual threads; sends are serialized over the one connection.
+ *
+ * <p><b>Logging</b> uses {@code java.util.logging}, which Spring Boot, Tomcat and the SLF4J bridge pick up.
+ * Logger {@code io.primelogiclab.mailroom.Mailer} logs each connection (server, security, user), each
+ * email sent (Message-ID and the server's reply) and each close at FINE (DEBUG), and failed attempts at
+ * WARNING. With {@link MailConfig.Builder#debug(boolean)} those details are logged at INFO instead, and the
+ * SMTP conversation is logged at INFO to {@code io.primelogiclab.mailroom.smtp}. Passwords are never logged.
  */
 public class Mailer implements AutoCloseable {
 
     private static final Logger LOG = Logger.getLogger(Mailer.class.getName());
+    /** Receives the SMTP conversation when {@link MailConfig#debug()} is on. */
+    static final Logger SMTP_LOG = Logger.getLogger("io.primelogiclab.mailroom.smtp");
 
     private final MailConfig config;
     private final Session session;
+    private final Level detailLevel;
     private final AtomicInteger connectionsOpened = new AtomicInteger();
     // A lock rather than synchronized: on Java 21 a virtual thread blocked on SMTP I/O inside
     // synchronized pins its carrier thread; with ReentrantLock it unmounts.
     private final ReentrantLock lock = new ReentrantLock();
+    private final SmtpTraceStream trace;
     private Transport transport;
+    private int sentOnConnection;
 
     public Mailer(MailConfig config) {
         this.config = Objects.requireNonNull(config, "config");
         this.session = Session.getInstance(config.toProperties());
+        this.detailLevel = config.debug() ? Level.INFO : Level.FINE;
+        this.trace = config.debug() ? new SmtpTraceStream(SMTP_LOG, Level.INFO) : null;
+        if (config.debug()) {
+            // The mail library writes its protocol trace to this stream; send it to the logger instead
+            // of stdout. Login commands are left out of the trace (mail.debug.auth stays false),
+            // and SmtpTraceStream leaves out message bodies.
+            session.setDebugOut(new PrintStream(trace, true, StandardCharsets.UTF_8));
+            session.setDebug(true);
+        }
     }
 
     /** Convenience: open a mailer, send one email, close it. Prefer a shared {@link Mailer} for multiple emails. */
@@ -114,7 +138,14 @@ public class Mailer implements AutoCloseable {
         try {
             withRetry("send email \"" + email.subject() + "\"", () -> {
                 ensureConnected();
+                long start = System.nanoTime();
                 transport.sendMessage(message, message.getAllRecipients());
+                sentOnConnection++;
+                if (LOG.isLoggable(detailLevel)) {
+                    LOG.log(detailLevel, "Sent \"" + email.subject() + "\" " + message.getMessageID()
+                            + " to " + message.getAllRecipients().length + " recipient(s) via " + server()
+                            + " in " + millisSince(start) + " ms; server replied: " + lastServerResponse());
+                }
             });
         } finally {
             lock.unlock();
@@ -161,8 +192,8 @@ public class Mailer implements AutoCloseable {
                     break;
                 }
                 if (attempt < max) {
-                    LOG.log(Level.WARNING, "Attempt {0}/{1} to {2} failed: {3}; retrying",
-                            new Object[]{attempt, max, what, e.getMessage()});
+                    LOG.log(Level.WARNING, "Attempt " + attempt + "/" + max + " to " + what + " via " + server()
+                            + " failed: " + oneLine(e) + "; retrying");
                     pause();
                 }
             }
@@ -170,7 +201,7 @@ public class Mailer implements AutoCloseable {
 
         MessagingException last = failures.get(failures.size() - 1);
         MailException ex = new MailException(
-                "Failed to " + what + " after " + failures.size() + " attempt(s): " + last.getMessage(), last);
+                "Failed to " + what + " after " + failures.size() + " attempt(s): " + oneLine(last), last);
         for (int i = 0; i < failures.size() - 1; i++) {
             ex.addSuppressed(failures.get(i));
         }
@@ -203,7 +234,17 @@ public class Mailer implements AutoCloseable {
         if (transport != null && transport.isConnected()) {
             return;
         }
+        if (transport != null) {
+            LOG.log(detailLevel, "Connection to " + server() + " was closed by the server; reconnecting");
+        }
         disconnect();
+        if (trace != null) {
+            trace.reset();
+        }
+
+        String login = config.hasCredentials() ? "as " + config.username() : "without login";
+        LOG.log(detailLevel, "Connecting to " + server() + " " + login);
+        long start = System.nanoTime();
         Transport t = session.getTransport(config.protocol());
         if (config.hasCredentials()) {
             t.connect(config.host(), config.port(), config.username(), config.password());
@@ -211,7 +252,12 @@ public class Mailer implements AutoCloseable {
             t.connect(config.host(), config.port(), null, null);
         }
         transport = t;
-        connectionsOpened.incrementAndGet();
+        sentOnConnection = 0;
+        int n = connectionsOpened.incrementAndGet();
+        if (LOG.isLoggable(detailLevel)) {
+            LOG.log(detailLevel, "Connected to " + server() + " " + login + " in " + millisSince(start)
+                    + " ms (connection #" + n + ", encrypted: " + isEncrypted(t) + ")");
+        }
     }
 
     private void disconnect() {
@@ -224,6 +270,110 @@ public class Mailer implements AutoCloseable {
             LOG.log(Level.FINE, "Ignoring error while closing SMTP connection", e);
         } finally {
             transport = null;
+            LOG.log(detailLevel, "Closed connection to " + server() + " after " + sentOnConnection + " email(s)");
+        }
+    }
+
+    /** Host, port and security, e.g. {@code smtp.example.com:587 (STARTTLS)}. */
+    private String server() {
+        return config.host() + ":" + config.port() + " (" + config.security() + ")";
+    }
+
+    private String lastServerResponse() {
+        if (transport instanceof SMTPTransport smtp) {
+            String reply = smtp.getLastServerResponse();
+            return reply == null ? "(none)" : reply.trim();
+        }
+        return "(unknown)";
+    }
+
+    /** Whether the live socket is TLS, from the start (TLS) or after a STARTTLS upgrade. */
+    private static boolean isEncrypted(Transport t) {
+        return t instanceof SMTPTransport smtp && smtp.isSSL();
+    }
+
+    /** The exception message on one line; server replies end with a line break. */
+    private static String oneLine(Throwable t) {
+        String m = t.getMessage();
+        return m == null ? t.getClass().getName() : m.trim();
+    }
+
+    private static long millisSince(long startNanos) {
+        return (System.nanoTime() - startNanos) / 1_000_000;
+    }
+
+    /**
+     * Logs the mail library's protocol trace line by line. Message headers are kept; the message body
+     * (text and attachments) is replaced by a line count, so logs stay small and content stays private.
+     */
+    private static final class SmtpTraceStream extends OutputStream {
+        private enum State { COMMANDS, HEADERS, BODY }
+
+        private final Logger logger;
+        private final Level level;
+        private final ByteArrayOutputStream line = new ByteArrayOutputStream();
+        private State state = State.COMMANDS;
+        private int bodyLines;
+
+        SmtpTraceStream(Logger logger, Level level) {
+            this.logger = logger;
+            this.level = level;
+        }
+
+        /** Back to command mode, e.g. for a new connection after one failed mid-message. */
+        synchronized void reset() {
+            line.reset();
+            state = State.COMMANDS;
+        }
+
+        @Override
+        public synchronized void write(int b) {
+            if (b == '\n') {
+                endLine();
+            } else if (b != '\r') {
+                line.write(b);
+            }
+        }
+
+        private void endLine() {
+            String text = new String(line.toByteArray(), StandardCharsets.UTF_8);
+            line.reset();
+            switch (state) {
+                case COMMANDS:
+                    log(text);
+                    if (text.startsWith("354")) { // server is ready for the message: headers come next
+                        state = State.HEADERS;
+                    }
+                    break;
+                case HEADERS:
+                    if (text.isEmpty()) {
+                        state = State.BODY;
+                        bodyLines = 0;
+                    } else {
+                        log(text);
+                        if (text.equals(".")) {
+                            state = State.COMMANDS;
+                        }
+                    }
+                    break;
+                case BODY:
+                    if (text.equals(".") || text.startsWith("DEBUG")) { // end of message, or the library reporting an error
+                        logger.log(level, "(message body: " + bodyLines + " line(s), not logged)");
+                        log(text);
+                        state = State.COMMANDS;
+                    } else {
+                        bodyLines++;
+                    }
+                    break;
+                default:
+                    throw new IllegalStateException(state.name());
+            }
+        }
+
+        private void log(String text) {
+            if (!text.isEmpty()) {
+                logger.log(level, text);
+            }
         }
     }
 

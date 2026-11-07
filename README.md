@@ -13,11 +13,72 @@ Both builds have the same API (`io.primelogiclab.mailroom`); pick the one that m
 
 `mailroom-java21` also uses a lock instead of `synchronized`, so a shared `Mailer` is safe and efficient to call from virtual threads.
 
+## Requirements
+
+- **To use:** Java 8+ for `mailroom-java8`, Java 21+ for `mailroom-java21`.
+- **To build:** Maven 3.9+, and JDK 21+ to build both modules (JDK 8 can build `mailroom-java8` only).
+- **To run the tests:** nothing else. They start an embedded SMTP server (GreenMail) on a free local port.
+
+## Dependencies
+
+The mailroom jar contains only mailroom's own classes. It needs the mail library jars below at runtime. Maven and Gradle download them automatically; if you copy the mailroom jar by hand, put these next to it on the classpath.
+
+| Build | Jars needed at runtime |
+|---|---|
+| `mailroom-java8` | `com.sun.mail:javax.mail:1.6.2`<br>`javax.activation:activation:1.1` (built into Java 8; needed on Java 11+) |
+| `mailroom-java21` | `org.eclipse.angus:angus-mail:2.0.5`<br>`jakarta.mail:jakarta.mail-api:2.1.5`<br>`org.eclipse.angus:angus-activation:2.0.3`<br>`jakarta.activation:jakarta.activation-api:2.1.4` |
+
+To collect them into `target/lib` (for example, to ship with an app that doesn't use Maven):
+
+```bash
+mvn -pl mailroom-java21 dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/lib
+```
+
+Use `-pl mailroom-java8` for the Java 8 build.
+
+### Adding mailroom to a project
+
+mailroom isn't published to a public repository yet. Install it into your local Maven repository first:
+
+```bash
+mvn install
+```
+
+Maven:
+
 ```xml
 <dependency>
     <groupId>io.primelogiclab</groupId>
     <artifactId>mailroom-java21</artifactId> <!-- or mailroom-java8 -->
     <version>0.1.0-SNAPSHOT</version>
+</dependency>
+```
+
+Gradle:
+
+```groovy
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+dependencies {
+    implementation 'io.primelogiclab:mailroom-java21:0.1.0-SNAPSHOT' // or mailroom-java8
+}
+```
+
+If your app already brings in the mail library (for example `spring-boot-starter-mail`), Maven keeps a single version of it. To always use your app's version, exclude mailroom's copy:
+
+```xml
+<dependency>
+    <groupId>io.primelogiclab</groupId>
+    <artifactId>mailroom-java21</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <exclusions>
+        <exclusion>
+            <groupId>org.eclipse.angus</groupId> <!-- com.sun.mail for mailroom-java8 -->
+            <artifactId>*</artifactId>
+        </exclusion>
+    </exclusions>
 </dependency>
 ```
 
@@ -72,18 +133,126 @@ After a failed attempt the connection is dropped and re-opened, so a connection 
 
 Not retried: invalid emails (bad addresses, fail before any connection), and sends where the server already accepted some recipients (a retry would send them duplicates).
 
-## Build
+## Logging and debugging
 
-On JDK 21 or newer, build and install both:
+mailroom logs through `java.util.logging`, so it adds no dependency. Spring Boot, Tomcat and SLF4J's `jul-to-slf4j` bridge send it to your normal logs.
+
+| What | Logger | Level |
+|---|---|---|
+| Connecting and connected (server, port, security, user, whether the connection is encrypted), each email sent (Message-ID, recipient count, the server's reply), connection closed | `io.primelogiclab.mailroom.Mailer` | DEBUG (`FINE`) |
+| A failed attempt, before retrying | `io.primelogiclab.mailroom.Mailer` | WARNING |
+| The SMTP conversation | `io.primelogiclab.mailroom.smtp` | INFO, only in debug mode |
+
+The server's reply usually carries its queue ID (for example `250 2.0.0 OK queued as 4Xy2`), which the mail server's own logs can be searched for.
+
+```text
+Connecting to smtp.example.com:587 (STARTTLS) as me@example.com
+Connected to smtp.example.com:587 (STARTTLS) as me@example.com in 212 ms (connection #1, encrypted: true)
+Sent "Invoice 1042" <1993.0.17@app01> to 1 recipient(s) via smtp.example.com:587 (STARTTLS) in 95 ms; server replied: 250 2.0.0 OK queued as 4Xy2
+Closed connection to smtp.example.com:587 (STARTTLS) after 1 email(s)
+```
+
+### Turn on DEBUG without changing code
+
+Spring Boot, in `application.properties`:
+
+```properties
+logging.level.io.primelogiclab.mailroom=DEBUG
+```
+
+Logback (with `jul-to-slf4j` installed; outside Spring Boot, also add `<contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator"/>` so the level reaches `java.util.logging`):
+
+```xml
+<logger name="io.primelogiclab.mailroom" level="DEBUG"/>
+```
+
+Plain `java.util.logging` or Tomcat, in `logging.properties`:
+
+```properties
+io.primelogiclab.mailroom.level = FINE
+java.util.logging.ConsoleHandler.level = FINE
+```
+
+### Debug mode
+
+For setting up or diagnosing a mail server, turn on debug mode:
+
+```java
+MailConfig config = MailConfig.builder("smtp.example.com")
+        .credentials("user", "secret")
+        .debug(true)
+        .build();
+```
+
+It logs the details above at INFO, so they show up without changing log levels, and adds the SMTP conversation: the server's greeting, EHLO and the extensions it offers, STARTTLS, login result, `MAIL FROM` / `RCPT TO`, the message headers, and every server reply. A good pattern is to read `debug` from your app's own configuration so it can be switched on without a rebuild.
+
+What is never logged:
+
+- **Passwords.** The login exchange is replaced by `AUTH LOGIN command trace suppressed`.
+- **Message bodies and attachments.** The body is replaced by `(message body: N line(s), not logged)`.
+
+Email addresses, subjects and headers are logged, so treat debug logs as containing personal data.
+
+## Send a test email from the command line
+
+Both jars include `MailroomCli`, which sends a test email so you can check SMTP settings before wiring them into an app. Run it with the mailroom jar and its dependencies on the classpath:
+
+```bash
+mvn install
+mvn -pl mailroom-java21 dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/lib
+export MAILROOM_PASSWORD='your-smtp-password'
+java -cp "mailroom-java21/target/mailroom-java21-0.1.0-SNAPSHOT.jar:mailroom-java21/target/lib/*" \
+  io.primelogiclab.mailroom.MailroomCli \
+  --host smtp.example.com --user me@example.com \
+  --from me@example.com --to you@example.com
+```
+
+On Windows, separate classpath entries with `;` instead of `:`, and in PowerShell set the password with `$env:MAILROOM_PASSWORD = 'your-smtp-password'`. Without `MAILROOM_PASSWORD`, the tool prompts for the password. For the Java 8 build, use `mailroom-java8` in the paths.
+
+```text
+Sending 1 email(s) to you@example.com via smtp.example.com:587 (STARTTLS) as me@example.com ...
+OK: sent 1 email(s) over 1 connection(s) in 812 ms
+```
+
+| Option | Meaning |
+|---|---|
+| `--host`, `--from`, `--to` | Required. `--to` can repeat or be comma-separated |
+| `--port` | Default 25, 587 or 465 to match `--security` |
+| `--security` | `none`, `starttls` (default) or `tls` |
+| `--user` | Log in as this user; password from `MAILROOM_PASSWORD` or a prompt |
+| `--subject`, `--text` | Override the default subject and body |
+| `--count <n>` | Send n emails over one connection |
+| `--attempts <n>` | Tries per email (default 3) |
+| `--trust-any-cert` | Accept any TLS certificate; self-signed test servers only |
+| `--verbose` | Debug mode: connection details, server replies and the SMTP conversation |
+| `--help` | Show all options |
+
+Exit codes: `0` sent, `1` sending failed, `2` bad arguments.
+
+## Build and test
+
+Build, test and install both modules (JDK 21+):
 
 ```bash
 mvn install
 ```
 
-On JDK 8, build only the Java 8 module:
+Run the tests only:
 
 ```bash
-mvn -pl mailroom-java8 -am install
+mvn test
+```
+
+On JDK 8, the Java 8 module only:
+
+```bash
+mvn -pl mailroom-java8 -am test
+```
+
+A single test:
+
+```bash
+mvn -pl mailroom-java21 test -Dtest='MailerTest#reusesOneConnectionForManyEmails'
 ```
 
 The Java 8 module is compiled with `--release 8` on newer JDKs, so any Java 9+ API call fails the build. CI tests each module on its own minimum JDK (8 and 21) on Linux and Windows.
