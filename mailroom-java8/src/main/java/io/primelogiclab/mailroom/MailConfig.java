@@ -3,6 +3,7 @@ package io.primelogiclab.mailroom;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.function.Supplier;
 
 /**
  * Immutable SMTP server settings. Create with {@link #builder(String)}.
@@ -13,6 +14,9 @@ import java.util.Properties;
  *         .credentials("user", "secret")
  *         .build();
  * }</pre>
+ *
+ * <p>For servers that require OAuth 2.0, such as Microsoft 365 and Google, log in with an access token
+ * instead of a password: {@link Builder#oauth2(String, Supplier)}.
  */
 public final class MailConfig {
 
@@ -24,6 +28,7 @@ public final class MailConfig {
     private final Security security;
     private final String username;
     private final String password;
+    private final Supplier<String> accessToken;
     private final Duration connectTimeout;
     private final Duration readTimeout;
     private final int maxAttempts;
@@ -38,6 +43,7 @@ public final class MailConfig {
         this.port = b.port > 0 ? b.port : defaultPort(b.security);
         this.username = b.username;
         this.password = b.password;
+        this.accessToken = b.accessToken;
         this.connectTimeout = b.connectTimeout;
         this.readTimeout = b.readTimeout;
         this.maxAttempts = b.maxAttempts;
@@ -69,6 +75,8 @@ public final class MailConfig {
     public Security security() { return security; }
     public String username() { return username; }
     public boolean hasCredentials() { return username != null; }
+    /** Whether the login uses an OAuth 2.0 access token (XOAUTH2) instead of a password. */
+    public boolean usesOAuth2() { return accessToken != null; }
     public Duration connectTimeout() { return connectTimeout; }
     public Duration readTimeout() { return readTimeout; }
     public int maxAttempts() { return maxAttempts; }
@@ -77,6 +85,9 @@ public final class MailConfig {
     public boolean debug() { return debug; }
 
     String password() { return password; }
+
+    /** Supplies the OAuth 2.0 access token; null unless {@link #usesOAuth2()}. */
+    Supplier<String> accessToken() { return accessToken; }
 
     /** The protocol name Jakarta Mail should use for this config. */
     String protocol() {
@@ -91,6 +102,11 @@ public final class MailConfig {
         props.put(p + "host", host);
         props.put(p + "port", String.valueOf(port));
         props.put(p + "auth", String.valueOf(hasCredentials()));
+        if (usesOAuth2()) {
+            // Offer only XOAUTH2, so the token is never sent as a password with LOGIN or PLAIN.
+            props.put(p + "auth.mechanisms", "XOAUTH2");
+            props.put(p + "auth.xoauth2.disable", "false");
+        }
         props.put(p + "connectiontimeout", String.valueOf(connectTimeout.toMillis()));
         props.put(p + "timeout", String.valueOf(readTimeout.toMillis()));
         props.put(p + "writetimeout", String.valueOf(readTimeout.toMillis()));
@@ -113,7 +129,7 @@ public final class MailConfig {
     @Override
     public String toString() {
         return "MailConfig{" + security + "://" + host + ":" + port
-                + (hasCredentials() ? ", user=" + username : "")
+                + (hasCredentials() ? ", user=" + username + (usesOAuth2() ? " (OAuth 2.0)" : "") : "")
                 + ", maxAttempts=" + maxAttempts + (debug ? ", debug" : "") + "}";
     }
 
@@ -123,6 +139,7 @@ public final class MailConfig {
         private Security security = Security.STARTTLS;
         private String username;
         private String password;
+        private Supplier<String> accessToken;
         private Duration connectTimeout = Duration.ofSeconds(10);
         private Duration readTimeout = Duration.ofSeconds(30);
         private int maxAttempts = DEFAULT_MAX_ATTEMPTS;
@@ -157,6 +174,22 @@ public final class MailConfig {
         public Builder credentials(String username, String password) {
             this.username = Objects.requireNonNull(username, "username");
             this.password = Objects.requireNonNull(password, "password");
+            return this;
+        }
+
+        /**
+         * Logs in with an OAuth 2.0 access token (SASL XOAUTH2) instead of a password, as Microsoft 365
+         * and Google require. {@code accessToken} is called each time a connection is opened (the first
+         * send, a reconnect, and each retry), so it should return a current token: cache it and renew it
+         * before it expires, as OAuth client libraries do. If it throws, the attempt fails and is retried.
+         * The token is never logged.
+         *
+         * @param username    the mailbox to log in as, for example {@code noreply@contoso.com}
+         * @param accessToken returns the access token, for example {@code tokenClient::getAccessToken}
+         */
+        public Builder oauth2(String username, Supplier<String> accessToken) {
+            this.username = Objects.requireNonNull(username, "username");
+            this.accessToken = Objects.requireNonNull(accessToken, "accessToken");
             return this;
         }
 
@@ -201,8 +234,8 @@ public final class MailConfig {
         /**
          * Logs connection details, each email sent with the server's reply, and the SMTP conversation,
          * all at INFO so they show up without changing log levels. Use while setting up or diagnosing
-         * a mail server. Passwords are never logged. Defaults to false; without it the same details
-         * (but not the SMTP conversation) are logged at FINE (DEBUG).
+         * a mail server. Passwords and access tokens are never logged. Defaults to false; without it the
+         * same details (but not the SMTP conversation) are logged at FINE (DEBUG).
          */
         public Builder debug(boolean debug) {
             this.debug = debug;
@@ -216,6 +249,9 @@ public final class MailConfig {
         }
 
         public MailConfig build() {
+            if (password != null && accessToken != null) {
+                throw new IllegalStateException("Use either credentials(...) or oauth2(...), not both");
+            }
             return new MailConfig(this);
         }
 

@@ -21,6 +21,9 @@ public final class MailroomCli {
     /** Environment variable holding the SMTP password, so it stays out of shell history. */
     public static final String PASSWORD_ENV = "MAILROOM_PASSWORD";
 
+    /** Environment variable holding the OAuth 2.0 access token for {@code --oauth2}. */
+    public static final String TOKEN_ENV = "MAILROOM_TOKEN";
+
     static final int OK = 0;
     static final int SEND_FAILED = 1;
     static final int USAGE = 2;
@@ -41,6 +44,9 @@ public final class MailroomCli {
             "  --security <mode>     none | starttls | tls   (default: starttls)",
             "  --user <name>         Log in as this user. The password is read from the",
             "                        " + PASSWORD_ENV + " environment variable, or prompted for.",
+            "  --oauth2              With --user: log in with an OAuth 2.0 access token instead of",
+            "                        a password. The token is read from the " + TOKEN_ENV,
+            "                        environment variable, or prompted for.",
             "  --subject <text>      Default: \"mailroom test email\"",
             "  --text <text>         Body. Default: a short note with the time and server",
             "  --count <n>           Send n emails over one connection (default: 1)",
@@ -92,7 +98,8 @@ public final class MailroomCli {
 
         out.println("Sending " + o.count + " email(s) to " + String.join(", ", o.to)
                 + " via " + config.host() + ":" + config.port() + " (" + config.security() + ")"
-                + (config.hasCredentials() ? " as " + config.username() : "") + " ...");
+                + (config.hasCredentials() ? " as " + config.username()
+                        + (config.usesOAuth2() ? " with OAuth 2.0" : "") : "") + " ...");
 
         long start = System.nanoTime();
         int sent = 0;
@@ -126,8 +133,11 @@ public final class MailroomCli {
         if (o.port > 0) {
             b.port(o.port);
         }
-        if (o.user != null) {
-            b.credentials(o.user, password(o.user, env));
+        if (o.user != null && o.oauth2) {
+            String token = secret(o.user, env, TOKEN_ENV, "access token").trim();
+            b.oauth2(o.user, () -> token);
+        } else if (o.user != null) {
+            b.credentials(o.user, secret(o.user, env, PASSWORD_ENV, "password"));
         }
         String protocol = o.security == Security.TLS ? "smtps" : "smtp";
         if (o.trustAnyCert) {
@@ -139,20 +149,21 @@ public final class MailroomCli {
         return b.build();
     }
 
-    private static String password(String user, Function<String, String> env) {
-        String fromEnv = env.apply(PASSWORD_ENV);
+    /** A password or token from the environment variable, or typed at a prompt (not echoed). */
+    private static String secret(String user, Function<String, String> env, String variable, String what) {
+        String fromEnv = env.apply(variable);
         if (fromEnv != null) {
             return fromEnv;
         }
         Console console = System.console();
         if (console == null) {
-            throw new IllegalArgumentException("--user given but no password: set " + PASSWORD_ENV);
+            throw new IllegalArgumentException("--user given but no " + what + ": set " + variable);
         }
-        char[] pw = console.readPassword("Password for %s: ", user);
-        if (pw == null) {
-            throw new IllegalArgumentException("no password entered");
+        char[] value = console.readPassword("%s for %s: ", Character.toUpperCase(what.charAt(0)) + what.substring(1), user);
+        if (value == null) {
+            throw new IllegalArgumentException("no " + what + " entered");
         }
-        return new String(pw);
+        return new String(value);
     }
 
     private static String body(Options o, MailConfig config) {
@@ -185,6 +196,7 @@ public final class MailroomCli {
         int count = 1;
         int attempts = MailConfig.DEFAULT_MAX_ATTEMPTS;
         boolean trustAnyCert;
+        boolean oauth2;
         boolean verbose;
         boolean help;
 
@@ -208,6 +220,9 @@ public final class MailroomCli {
                         break;
                     case "--verbose":
                         o.verbose = true;
+                        break;
+                    case "--oauth2":
+                        o.oauth2 = true;
                         break;
                     case "--host":
                     case "--port":
@@ -235,6 +250,7 @@ public final class MailroomCli {
                 if (o.host == null) throw new IllegalArgumentException("--host is required");
                 if (o.from == null) throw new IllegalArgumentException("--from is required");
                 if (o.to.isEmpty()) throw new IllegalArgumentException("--to is required");
+                if (o.oauth2 && o.user == null) throw new IllegalArgumentException("--oauth2 needs --user");
             }
             return o;
         }

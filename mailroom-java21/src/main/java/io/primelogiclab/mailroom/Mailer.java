@@ -55,7 +55,8 @@ import java.util.logging.Logger;
  * Logger {@code io.primelogiclab.mailroom.Mailer} logs each connection (server, security, user), each
  * email sent (Message-ID and the server's reply) and each close at FINE (DEBUG), and failed attempts at
  * WARNING. With {@link MailConfig.Builder#debug(boolean)} those details are logged at INFO instead, and the
- * SMTP conversation is logged at INFO to {@code io.primelogiclab.mailroom.smtp}. Passwords are never logged.
+ * SMTP conversation is logged at INFO to {@code io.primelogiclab.mailroom.smtp}. Passwords and access tokens
+ * are never logged.
  */
 public class Mailer implements AutoCloseable {
 
@@ -242,12 +243,13 @@ public class Mailer implements AutoCloseable {
             trace.reset();
         }
 
-        String login = config.hasCredentials() ? "as " + config.username() : "without login";
+        String login = !config.hasCredentials() ? "without login"
+                : "as " + config.username() + (config.usesOAuth2() ? " with OAuth 2.0" : "");
         LOG.log(detailLevel, "Connecting to " + server() + " " + login);
         long start = System.nanoTime();
         Transport t = session.getTransport(config.protocol());
         if (config.hasCredentials()) {
-            t.connect(config.host(), config.port(), config.username(), config.password());
+            t.connect(config.host(), config.port(), config.username(), secret());
         } else {
             t.connect(config.host(), config.port(), null, null);
         }
@@ -258,6 +260,23 @@ public class Mailer implements AutoCloseable {
             LOG.log(detailLevel, "Connected to " + server() + " " + login + " in " + millisSince(start)
                     + " ms (connection #" + n + ", encrypted: " + isEncrypted(t) + ")");
         }
+    }
+
+    /** The password, or a current OAuth 2.0 access token from the config's supplier. */
+    private String secret() throws MessagingException {
+        if (!config.usesOAuth2()) {
+            return config.password();
+        }
+        String token;
+        try {
+            token = config.accessToken().get();
+        } catch (RuntimeException e) {
+            throw new MessagingException("Could not get an OAuth 2.0 access token: " + oneLine(e), e);
+        }
+        if (token == null || token.trim().isEmpty()) {
+            throw new MessagingException("The OAuth 2.0 access token supplier returned no token");
+        }
+        return token.trim();
     }
 
     private void disconnect() {
