@@ -6,14 +6,13 @@ import java.io.DataInputStream;
 import java.io.InputStream;
 import org.junit.jupiter.api.Test;
 
-/** Smoke test: the module builds, compiles to Java 8 bytecode, and its tests run. */
+/** The module compiles to Java 8 bytecode, so one jar runs on Java 8, 21 and 25. */
 class CoreModuleTest {
 
     @Test
     void compiledForJava8() throws Exception {
-        String resource = "/" + getClass().getPackage().getName().replace('.', '/') + "/package-info.class";
-        try (InputStream raw = getClass().getResourceAsStream(resource)) {
-            assertThat(raw).as(resource).isNotNull();
+        try (InputStream raw = Email.class.getResourceAsStream("Email.class")) {
+            assertThat(raw).isNotNull();
             DataInputStream in = new DataInputStream(raw);
             assertThat(in.readInt()).as("class file magic").isEqualTo(0xCAFEBABE);
             in.readUnsignedShort();
