@@ -33,5 +33,9 @@ All notable changes to mailroom are listed here. The format follows
 - `mailroom-test`: `InMemoryTransport`, which records and accepts every email and offers assertions such as
   `assertSentOne(to, tag)`, and `ScriptedTransport`, which succeeds, fails with a given `FailureKind` or waits, one
   scripted step per call. No test-framework dependency: assertions throw `AssertionError`.
+- Routing (internal, behind the coming `Mailroom` facade): drops transports that lack a needed capability, don't
+  understand an essential extension, exceed a limit or fail their precheck; then tries the rest in order, retrying
+  `UNAVAILABLE` once after a jittered backoff, waiting for `RATE_LIMITED` only within `maxInlineWait`, failing over on
+  `REJECTED` and `AUTHENTICATION`, and stopping on `INVALID_MESSAGE` and (by default) `UNKNOWN_OUTCOME`.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main
