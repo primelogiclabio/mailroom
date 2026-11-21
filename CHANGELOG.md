@@ -30,5 +30,8 @@ All notable changes to mailroom are listed here. The format follows
 - `TransportRegistry`: finds providers with `ServiceLoader`, fails at startup when a provider needs a newer
   mailroom-core (`mailroom-resend 1.3.0 needs mailroom-core ≥ 1.2, found 1.1.0`) or two share an id, and builds named
   transports from `transports.<name>.type` properties, reporting every problem at once.
+- `mailroom-test`: `InMemoryTransport`, which records and accepts every email and offers assertions such as
+  `assertSentOne(to, tag)`, and `ScriptedTransport`, which succeeds, fails with a given `FailureKind` or waits, one
+  scripted step per call. No test-framework dependency: assertions throw `AssertionError`.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main
