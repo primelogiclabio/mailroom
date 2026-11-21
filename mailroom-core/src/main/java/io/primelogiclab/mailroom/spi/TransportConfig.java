@@ -2,22 +2,19 @@ package io.primelogiclab.mailroom.spi;
 
 import io.primelogiclab.mailroom.InvalidConfigException;
 import io.primelogiclab.mailroom.Secret;
+import io.primelogiclab.mailroom.internal.Durations;
 import java.time.Duration;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * A typed view over one transport's string properties, such as the {@code transports.primary.*} block of a
@@ -31,8 +28,6 @@ import java.util.regex.Pattern;
  * @since 0.1.0
  */
 public final class TransportConfig {
-
-    private static final Pattern SHORT_DURATION = Pattern.compile("(\\d+)(ms|s|m|h|d)");
 
     private final String name;
     private final Map<String, String> values;
@@ -168,29 +163,8 @@ public final class TransportConfig {
         if (!value.isPresent()) {
             return Optional.empty();
         }
-        String text = value.get().toLowerCase(Locale.ROOT);
-        Duration duration = null;
-        Matcher m = SHORT_DURATION.matcher(text);
-        try {
-            if (m.matches()) {
-                long amount = Long.parseLong(m.group(1));
-                String unit = m.group(2);
-                duration = "ms".equals(unit) ? Duration.ofMillis(amount)
-                        : "s".equals(unit) ? Duration.ofSeconds(amount)
-                        : "m".equals(unit) ? Duration.ofMinutes(amount)
-                        : "h".equals(unit) ? Duration.ofHours(amount)
-                        : Duration.ofDays(amount);
-            } else if (text.startsWith("p")) {
-                duration = Duration.parse(text.toUpperCase(Locale.ROOT));
-            }
-        } catch (NumberFormatException e) {
-            duration = null;
-        } catch (ArithmeticException e) {
-            duration = null;
-        } catch (DateTimeParseException e) {
-            duration = null;
-        }
-        if (duration == null || duration.isNegative()) {
+        Duration duration = Durations.parse(value.get());
+        if (duration == null) {
             throw new InvalidConfigException("transport '" + name + "': '" + key
                     + "' must be a duration such as 250ms, 30s, 5m, 1h or PT30S");
         }
