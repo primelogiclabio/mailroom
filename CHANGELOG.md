@@ -10,5 +10,10 @@ All notable changes to mailroom are listed here. The format follows
 - Module skeleton on mailroom-parent 0.1.0: `mailroom-core`, `mailroom-http`, `mailroom-test` and `mailroom-tck`,
   each with its `Automatic-Module-Name` and a smoke test, built as Java 8 bytecode and tested on JDK 8, 21 and 25.
 - CI and release workflows from mailroom-parent's templates; snapshots deploy from `main`.
+- `mailroom-core` message model: `Address` (parsing, formatting, masked `toString`), `Attachment` (regular and
+  inline `cid:` parts) and the immutable `Email` with its builder, checked when built: recipients, subject, bodies,
+  inline content ids, custom headers (no CR/LF, no reserved names), tags, metadata, `sendAt` and `idempotencyKey`.
+- `MailroomException` (unchecked) and `InvalidEmailException`, which lists every problem and never repeats an address,
+  subject or body.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main
