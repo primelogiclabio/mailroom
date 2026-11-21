@@ -1,0 +1,225 @@
+package io.primelogiclab.mailroom.internal;
+
+import io.primelogiclab.mailroom.Address;
+import io.primelogiclab.mailroom.Email;
+import io.primelogiclab.mailroom.InvalidEmailException;
+import io.primelogiclab.mailroom.Mailroom;
+import io.primelogiclab.mailroom.MailroomException;
+import io.primelogiclab.mailroom.SendResult;
+import io.primelogiclab.mailroom.spi.MailTransport;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
+
+/**
+ * The {@link Mailroom} implementation: the router plus the default sender, the executor and closing. Not API: this
+ * package may change in any release.
+ */
+public final class DefaultMailroom implements Mailroom {
+
+    private static final Duration CLOSE_WAIT = Duration.ofSeconds(10);
+    private static final AtomicInteger POOL_THREADS = new AtomicInteger();
+
+    private final Router router;
+    private final Address defaultFrom;
+    private final Executor executor;
+    private final ExecutorService ownedExecutor;
+    private final AtomicBoolean closed;
+    private final List<String> pinnedRoute;
+
+    private DefaultMailroom(Router router, Address defaultFrom, Executor executor, ExecutorService ownedExecutor,
+            AtomicBoolean closed, List<String> pinnedRoute) {
+        this.router = router;
+        this.defaultFrom = defaultFrom;
+        this.executor = executor;
+        this.ownedExecutor = ownedExecutor;
+        this.closed = closed;
+        this.pinnedRoute = pinnedRoute;
+    }
+
+    /**
+     * Builds the mailroom; settings left null take the router's defaults.
+     *
+     * @param transports               the transports, with their final names
+     * @param defaultRoute             the default route, or null for all in order
+     * @param retryBackoff             the retry backoff, or null
+     * @param maxInlineWait            the inline wait limit, or null
+     * @param failoverOnUnknownOutcome whether unclear outcomes fail over
+     * @param executor                 the caller's executor, or null to create the default one
+     * @param clock                    the clock, or null
+     * @param defaultFrom              the default sender, or null
+     * @return the mailroom
+     */
+    public static Mailroom create(List<MailTransport> transports, String[] defaultRoute, Duration retryBackoff,
+            Duration maxInlineWait, boolean failoverOnUnknownOutcome, Executor executor, Clock clock,
+            Address defaultFrom) {
+        ExecutorService owned = null;
+        Executor effective = executor;
+        if (effective == null) {
+            owned = defaultExecutor();
+            effective = owned;
+        }
+        Router.Builder b = Router.builder().failoverOnUnknownOutcome(failoverOnUnknownOutcome).executor(effective);
+        for (MailTransport transport : transports) {
+            b.transport(transport);
+        }
+        if (defaultRoute != null) {
+            b.defaultRoute(defaultRoute);
+        }
+        if (retryBackoff != null) {
+            b.retryBackoff(retryBackoff);
+        }
+        if (maxInlineWait != null) {
+            b.maxInlineWait(maxInlineWait);
+        }
+        if (clock != null) {
+            b.clock(clock);
+        }
+        Router router;
+        try {
+            router = b.build();
+        } catch (RuntimeException e) {
+            if (owned != null) {
+                owned.shutdownNow();
+            }
+            throw e;
+        }
+        return new DefaultMailroom(router, defaultFrom, effective, owned, new AtomicBoolean(), null);
+    }
+
+    /**
+     * Creates the default executor: a virtual thread per task where available, otherwise a small bounded pool of
+     * daemon threads named {@code mailroom-send-N} that runs work on the caller's thread when its queue is full.
+     *
+     * @return the executor
+     */
+    static ExecutorService defaultExecutor() {
+        ExecutorService virtual = Jdk.newVirtualThreadExecutor();
+        if (virtual != null) {
+            return virtual;
+        }
+        int threads = Math.max(2, Math.min(8, Runtime.getRuntime().availableProcessors()));
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(threads, threads, 60, TimeUnit.SECONDS,
+                new ArrayBlockingQueue<Runnable>(1000), new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable task) {
+                        Thread thread = new Thread(task, "mailroom-send-" + POOL_THREADS.incrementAndGet());
+                        thread.setDaemon(true);
+                        return thread;
+                    }
+                }, new ThreadPoolExecutor.CallerRunsPolicy());
+        pool.allowCoreThreadTimeOut(true);
+        return pool;
+    }
+
+    @Override
+    public SendResult send(Email email) {
+        Objects.requireNonNull(email, "email");
+        checkOpen();
+        Email withSender = withSender(email);
+        return pinnedRoute == null ? router.send(withSender) : router.send(withSender, pinnedRoute);
+    }
+
+    @Override
+    public CompletableFuture<SendResult> sendAsync(final Email email) {
+        Objects.requireNonNull(email, "email");
+        checkOpen();
+        return CompletableFuture.supplyAsync(new Supplier<SendResult>() {
+            @Override
+            public SendResult get() {
+                return send(email);
+            }
+        }, executor);
+    }
+
+    @Override
+    public Mailroom via(String... transportNames) {
+        Objects.requireNonNull(transportNames, "transportNames");
+        if (transportNames.length == 0) {
+            throw new IllegalArgumentException("via needs at least one transport name");
+        }
+        Set<String> seen = new HashSet<String>();
+        for (String name : transportNames) {
+            if (!router.transports().containsKey(Objects.requireNonNull(name, "transport name"))) {
+                throw new IllegalArgumentException("no transport named '" + name + "' (configured: "
+                        + router.transports().keySet() + ")");
+            }
+            if (!seen.add(name)) {
+                throw new IllegalArgumentException("via names '" + name + "' twice");
+            }
+        }
+        return new DefaultMailroom(router, defaultFrom, executor, null, closed,
+                Collections.unmodifiableList(new ArrayList<String>(Arrays.asList(transportNames))));
+    }
+
+    @Override
+    public void close() {
+        if (pinnedRoute != null || !closed.compareAndSet(false, true)) {
+            return;
+        }
+        if (ownedExecutor != null) {
+            ownedExecutor.shutdown();
+            try {
+                if (!ownedExecutor.awaitTermination(CLOSE_WAIT.toMillis(), TimeUnit.MILLISECONDS)) {
+                    ownedExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                ownedExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+        RuntimeException first = null;
+        for (MailTransport transport : router.transports().values()) {
+            try {
+                transport.close();
+            } catch (RuntimeException e) {
+                if (first == null) {
+                    first = new MailroomException("Closing a transport failed", e);
+                } else {
+                    first.addSuppressed(e);
+                }
+            }
+        }
+        if (first != null) {
+            throw first;
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "Mailroom" + (pinnedRoute == null ? router.defaultRoute() : pinnedRoute)
+                + (closed.get() ? " (closed)" : "");
+    }
+
+    private Email withSender(Email email) {
+        if (email.from().isPresent()) {
+            return email;
+        }
+        if (defaultFrom == null) {
+            throw new InvalidEmailException("no sender: set from on the email or defaultFrom on the Mailroom");
+        }
+        return email.toBuilder().from(defaultFrom).build();
+    }
+
+    private void checkOpen() {
+        if (closed.get()) {
+            throw new IllegalStateException("This Mailroom is closed");
+        }
+    }
+}

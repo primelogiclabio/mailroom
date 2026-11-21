@@ -7,8 +7,9 @@ is a separate module with its own releases, found at runtime with `java.util.Ser
 providers at once, route messages between them and fail over when one is down. Adding a provider never needs a new
 release of the core.
 
-> **Status:** early development. The modules below are empty skeletons; the API arrives step by step, and there is
-> no release yet. Snapshots are published from `main`.
+> **Status:** early development, no release yet. `mailroom-core` and `mailroom-test` work; `mailroom-http` and
+> `mailroom-tck` are still empty, and the first transports are being built in their own repos. Snapshots are
+> published from `main`.
 
 ## Modules
 
@@ -22,6 +23,50 @@ release of the core.
 Provider modules live in their own repos, for example
 [mailroom-smtp](https://github.com/primelogiclabio/mailroom-smtp) and
 [mailroom-smtp2go](https://github.com/primelogiclabio/mailroom-smtp2go).
+
+## Using it
+
+Build an `Email`, then send it through a `Mailroom` that knows your transports:
+
+```java
+Mailroom mailroom = Mailroom.builder()
+    .defaultFrom("PrimeLogicLab <no-reply@primelogiclab.io>")
+    .transport("primary", primaryTransport)     // from a provider module, such as mailroom-smtp2go
+    .transport("backup", backupTransport)       // such as mailroom-smtp
+    .build();
+
+Email email = Email.builder()
+    .to("player@example.com")
+    .subject("Your tee time is confirmed")
+    .text(textBody)
+    .html(htmlBody)
+    .tag("booking")
+    .build();                                   // throws InvalidEmailException if anything is wrong
+
+SendResult result = mailroom.send(email);       // primary, then backup if primary is down
+mailroom.via("backup").send(email);             // only backup, for this call
+mailroom.sendAsync(email);                      // on a virtual thread on Java 21+, a small pool on Java 8
+```
+
+Or configure it with properties; each provider module is found on the classpath by its `type`:
+
+```properties
+default-from=PrimeLogicLab <no-reply@primelogiclab.io>
+transports.primary.type=smtp2go
+transports.primary.api-key=...
+transports.backup.type=smtp
+transports.backup.host=smtp.example.com
+routing.default=primary,backup
+```
+
+```java
+Mailroom mailroom = Mailroom.fromProperties(properties);   // fails at startup on any unknown or missing key
+```
+
+Failures are sorted into one `FailureKind`: `UNAVAILABLE` is retried once and then fails over, `REJECTED` and
+`AUTHENTICATION` fail over, `INVALID_MESSAGE` stops, and `UNKNOWN_OUTCOME` (the provider may already be delivering it)
+stops unless you turn on `failoverOnUnknownOutcome`. For tests, `mailroom-test` has `InMemoryTransport` and
+`ScriptedTransport`.
 
 ## Getting the snapshots
 

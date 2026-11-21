@@ -37,5 +37,10 @@ All notable changes to mailroom are listed here. The format follows
   understand an essential extension, exceed a limit or fail their precheck; then tries the rest in order, retrying
   `UNAVAILABLE` once after a jittered backoff, waiting for `RATE_LIMITED` only within `maxInlineWait`, failing over on
   `REJECTED` and `AUTHENTICATION`, and stopping on `INVALID_MESSAGE` and (by default) `UNKNOWN_OUTCOME`.
+- `Mailroom`, the facade: `send`, `sendAsync`, `via(...)` and `close`, built with `Mailroom.builder()` (default sender,
+  transports under their own or a chosen name, default route, retry settings, executor, clock) or
+  `Mailroom.fromProperties(...)` (`default-from`, `routing.default`, `failover-on-unknown-outcome`, `retry-backoff`,
+  `max-inline-wait`, `transports.<name>.*`, every problem reported at once). `sendAsync` runs on a virtual thread per
+  send on Java 21 and newer and on a small bounded pool on Java 8.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main
