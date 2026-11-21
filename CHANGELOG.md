@@ -19,5 +19,9 @@ All notable changes to mailroom are listed here. The format follows
   and read with `Email.extension(Class)`; a content-providing extension makes the subject and bodies optional.
 - `spi.Capability`, an open set of feature keys with the well-known constants, and `spi.TransportCapabilities`, which
   declares what a transport supports and understands and its documented limits.
+- Results and failures: `SendResult` (transport, provider, message id, `Status`, accepted time, attempts), `Attempt`,
+  the `FailureKind` classification, `SendFailedException` (kind, transport, status and provider codes, retry-after,
+  attempts) and `NoEligibleTransportException` (why each transport was skipped). Addresses in their messages are
+  masked.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main
