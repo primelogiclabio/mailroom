@@ -1,0 +1,12 @@
+target/
+.idea/
+*.iml
+.vscode/
+
+# secrets
+*.pem
+*.key
+*.p12
+*.jks
+.env
+keys/

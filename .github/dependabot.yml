@@ -1,0 +1,24 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # These lines need newer than Java 8; the parent's enforcer bans them too.
+      - dependency-name: org.junit:junit-bom
+        versions: ['>= 6']
+      - dependency-name: org.junit.jupiter:*
+        versions: ['>= 6']
+      - dependency-name: org.mockito:*
+        versions: ['>= 5']
+      - dependency-name: org.assertj:*
+        versions: ['>= 4']
+      - dependency-name: tools.jackson.*
+      # Maven 4 plugin betas need Maven 4; stay on the 3.x plugin lines.
+      - dependency-name: org.apache.maven.plugins:*
+        versions: ['>= 4.0.0-alpha']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -1,0 +1,61 @@
+# From mailroom-parent 0.1.0 templates/ci.yml. Keep it in step with that template.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test on JDK ${{ matrix.jdk }}
+    strategy:
+      fail-fast: false
+      matrix:
+        jdk: ['8', '21', '25']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # All three JDKs go into ~/.m2/toolchains.xml (versions 8, 25, 21); the last one, 21, runs Maven.
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            25
+            21
+          cache: maven
+      - name: Build and test on JDK ${{ matrix.jdk }}
+        run: ./mvnw -B verify -Dtest.jdk=${{ matrix.jdk }}
+
+  # The one required check in the branch ruleset: fails unless every matrix job passed.
+  build-ok:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.test.result }}" = success
+
+  deploy-snapshot:
+    needs: build-ok
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          server-id: primelogiclab-snapshots
+          server-username-env-var: REPO_TOKEN_NAME
+          server-password-env-var: REPO_TOKEN_SECRET
+      - name: Deploy the snapshot to repo.primelogiclab.io
+        run: ./mvnw -B deploy
+        env:
+          REPO_TOKEN_NAME: ${{ secrets.REPO_TOKEN_NAME }}
+          REPO_TOKEN_SECRET: ${{ secrets.REPO_TOKEN_SECRET }}

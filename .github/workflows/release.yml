@@ -1,0 +1,40 @@
+# From mailroom-parent 0.1.0 templates/release.yml. Keep it in step with that template.
+name: release
+
+# Push a tag vX.Y.Z on main to release X.Y.Z. The tag must match the POM version without -SNAPSHOT.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          server-id: primelogiclab-releases
+          server-username-env-var: REPO_TOKEN_NAME
+          server-password-env-var: REPO_TOKEN_SECRET
+      - name: Check the tag matches the POM version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          pom="$(./mvnw -B -q help:evaluate -Dexpression=project.version -DforceStdout)"
+          echo "tag $tag, pom $pom"
+          if [ "$pom" != "$tag-SNAPSHOT" ] && [ "$pom" != "$tag" ]; then
+            echo "::error::Tag v$tag does not match the POM version $pom"
+            exit 1
+          fi
+      - name: Set the release version
+        run: ./mvnw -B -q versions:set -DnewVersion="${GITHUB_REF_NAME#v}" -DgenerateBackupPoms=false
+      - name: Deploy the release to repo.primelogiclab.io
+        run: ./mvnw -B deploy -P release
+        env:
+          REPO_TOKEN_NAME: ${{ secrets.REPO_TOKEN_NAME }}
+          REPO_TOKEN_SECRET: ${{ secrets.REPO_TOKEN_SECRET }}

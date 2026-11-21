@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd"
+         child.project.url.inherit.append.path="false">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.primelogiclab.mailroom</groupId>
+        <artifactId>mailroom-parent</artifactId>
+        <version>0.1.0</version>
+        <relativePath/>
+    </parent>
+
+    <artifactId>mailroom</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>mailroom</name>
+    <description>Small Java email API with pluggable provider modules: the core library, HTTP helper, test kit and provider contract tests.</description>
+    <url>https://github.com/primelogiclabio/mailroom</url>
+
+    <scm child.scm.connection.inherit.append.path="false"
+         child.scm.developerConnection.inherit.append.path="false"
+         child.scm.url.inherit.append.path="false">
+        <connection>scm:git:https://github.com/primelogiclabio/mailroom.git</connection>
+        <developerConnection>scm:git:https://github.com/primelogiclabio/mailroom.git</developerConnection>
+        <url>https://github.com/primelogiclabio/mailroom</url>
+    </scm>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/primelogiclabio/mailroom/issues</url>
+    </issueManagement>
+
+    <modules>
+        <module>mailroom-core</module>
+        <module>mailroom-http</module>
+        <module>mailroom-test</module>
+        <module>mailroom-tck</module>
+    </modules>
+
+    <!-- Maven reads the parent before anything it declares, so these entries must be here too. -->
+    <repositories>
+        <repository>
+            <id>primelogiclab-releases</id>
+            <url>https://repo.primelogiclab.io/releases</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+        <repository>
+            <id>primelogiclab-snapshots</id>
+            <url>https://repo.primelogiclab.io/snapshots</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+    </repositories>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.primelogiclab.mailroom</groupId>
+                <artifactId>mailroom-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.primelogiclab.mailroom</groupId>
+                <artifactId>mailroom-http</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.primelogiclab.mailroom</groupId>
+                <artifactId>mailroom-test</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.primelogiclab.mailroom</groupId>
+                <artifactId>mailroom-tck</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- Test libraries for every module; versions come from mailroom-parent. -->
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
