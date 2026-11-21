@@ -27,5 +27,8 @@ All notable changes to mailroom are listed here. The format follows
   `TransportProvider`, `TransportConfig` and `ConfigKey` (checked, typed properties that reject unknown keys),
   `SendContext`, `Precheck` and `BatchItemResult`; plus `Secret` (redacted credentials from a value, a supplier or an
   environment variable) and `InvalidConfigException`.
+- `TransportRegistry`: finds providers with `ServiceLoader`, fails at startup when a provider needs a newer
+  mailroom-core (`mailroom-resend 1.3.0 needs mailroom-core ≥ 1.2, found 1.1.0`) or two share an id, and builds named
+  transports from `transports.<name>.type` properties, reporting every problem at once.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main

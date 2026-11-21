@@ -17,4 +17,24 @@
     <properties>
         <module.name>io.primelogiclab.mailroom</module.name>
     </properties>
+
+    <build>
+        <!-- Only version.properties is filtered: it gives core its own version at runtime, jar or not. -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>io/primelogiclab/mailroom/internal/version.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>io/primelogiclab/mailroom/internal/version.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
+    </build>
 </project>
