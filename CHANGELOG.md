@@ -15,5 +15,9 @@ All notable changes to mailroom are listed here. The format follows
   inline content ids, custom headers (no CR/LF, no reserved names), tags, metadata, `sendAt` and `idempotencyKey`.
 - `MailroomException` (unchecked) and `InvalidEmailException`, which lists every problem and never repeats an address,
   subject or body.
+- `EmailExtension` for provider-specific options (`essential`, `providesContent`), attached with `Email.Builder.with`
+  and read with `Email.extension(Class)`; a content-providing extension makes the subject and bodies optional.
+- `spi.Capability`, an open set of feature keys with the well-known constants, and `spi.TransportCapabilities`, which
+  declares what a transport supports and understands and its documented limits.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main

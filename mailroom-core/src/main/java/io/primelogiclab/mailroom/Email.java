@@ -42,6 +42,8 @@ import java.util.Set;
  *   <li>at least one recipient across {@code to}, {@code cc} and {@code bcc};</li>
  *   <li>a subject that is not blank and has no line breaks or other control characters;</li>
  *   <li>a text body, an HTML body or both, neither of them empty;</li>
+ *   <li>the subject and bodies may be left out when an {@linkplain EmailExtension#providesContent() extension
+ *       supplies the content}, such as a provider template; any that are given are still checked;</li>
  *   <li>inline attachments with distinct content ids;</li>
  *   <li>custom headers whose names are printable ASCII without {@code :}, whose values have no line breaks or other
  *       control characters (tab is allowed), and which don't use a name the email sets itself: From, Sender,
@@ -52,6 +54,9 @@ import java.util.Set;
  *   <li>an idempotency key of 1 to 256 visible ASCII characters.</li>
  * </ul>
  * Addresses and attachments are checked as they are created ({@link Address}, {@link Attachment}).
+ *
+ * <p>Provider-specific options travel as {@link EmailExtension}s: attach them with {@link Builder#with} and read them
+ * with {@link #extension(Class)}.
  *
  * <p>{@link #toString()} shows only counts, never addresses, the subject or the bodies.
  *
@@ -80,6 +85,7 @@ public final class Email {
     private final Map<String, String> metadata;
     private final Instant sendAt;
     private final String idempotencyKey;
+    private final Map<Class<? extends EmailExtension>, EmailExtension> extensions;
 
     private Email(Builder b) {
         this.from = b.from;
@@ -100,6 +106,8 @@ public final class Email {
         this.metadata = Collections.unmodifiableMap(new LinkedHashMap<String, String>(b.metadata));
         this.sendAt = b.sendAt;
         this.idempotencyKey = b.idempotencyKey;
+        this.extensions = Collections.unmodifiableMap(
+                new LinkedHashMap<Class<? extends EmailExtension>, EmailExtension>(b.extensions));
     }
 
     /**
@@ -134,6 +142,7 @@ public final class Email {
         b.metadata.putAll(metadata);
         b.sendAt = sendAt;
         b.idempotencyKey = idempotencyKey;
+        b.extensions.putAll(extensions);
         return b;
     }
 
@@ -198,8 +207,7 @@ public final class Email {
     }
 
     /**
-     * Returns the subject. It is always present today; it may be absent once a provider template supplies the
-     * content.
+     * Returns the subject. It is absent only when an extension supplies the content.
      *
      * @return the subject
      * @since 0.1.0
@@ -291,6 +299,29 @@ public final class Email {
     }
 
     /**
+     * Returns the extension of exactly this class, if the email carries one.
+     *
+     * @param type the extension class, such as {@code SendGridOptions.class}
+     * @param <T>  the extension type
+     * @return the extension, if present
+     * @since 0.1.0
+     */
+    public <T extends EmailExtension> Optional<T> extension(Class<T> type) {
+        Objects.requireNonNull(type, "type");
+        return Optional.ofNullable(type.cast(extensions.get(type)));
+    }
+
+    /**
+     * Returns every extension, in the order they were added.
+     *
+     * @return the extensions, possibly empty; the collection cannot be changed
+     * @since 0.1.0
+     */
+    public Collection<EmailExtension> extensions() {
+        return extensions.values();
+    }
+
+    /**
      * Two emails are equal when every field is equal, attachments byte by byte.
      *
      * @param other the object to compare with
@@ -310,25 +341,25 @@ public final class Email {
                 && Objects.equals(text, that.text) && Objects.equals(html, that.html)
                 && attachments.equals(that.attachments) && headers.equals(that.headers) && tags.equals(that.tags)
                 && metadata.equals(that.metadata) && Objects.equals(sendAt, that.sendAt)
-                && Objects.equals(idempotencyKey, that.idempotencyKey);
+                && Objects.equals(idempotencyKey, that.idempotencyKey) && extensions.equals(that.extensions);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(from, replyTo, to, cc, bcc, subject, text, html, attachments, headers, tags, metadata,
-                sendAt, idempotencyKey);
+                sendAt, idempotencyKey, extensions);
     }
 
     /**
-     * Describes the email by counts only, such as {@code Email[to=1, cc=0, bcc=0, attachments=1, tags=1]}, so it is
-     * safe to log.
+     * Describes the email by counts only, such as
+     * {@code Email[to=1, cc=0, bcc=0, attachments=1, tags=1, extensions=0]}, so it is safe to log.
      *
      * @return a description without addresses, subject or bodies
      */
     @Override
     public String toString() {
         return "Email[to=" + to.size() + ", cc=" + cc.size() + ", bcc=" + bcc.size() + ", attachments="
-                + attachments.size() + ", tags=" + tags.size() + "]";
+                + attachments.size() + ", tags=" + tags.size() + ", extensions=" + extensions.size() + "]";
     }
 
     private static <T> List<T> copy(List<T> list) {
@@ -360,6 +391,8 @@ public final class Email {
         private final Map<String, String> metadata = new LinkedHashMap<String, String>();
         private Instant sendAt;
         private String idempotencyKey;
+        private final Map<Class<? extends EmailExtension>, EmailExtension> extensions =
+                new LinkedHashMap<Class<? extends EmailExtension>, EmailExtension>();
 
         private Builder() {
         }
@@ -646,6 +679,21 @@ public final class Email {
         }
 
         /**
+         * Attaches provider-specific options. An email holds one extension per class: adding another instance of
+         * the same class replaces the earlier one.
+         *
+         * @param extension the options, such as a provider module's options object
+         * @return this builder
+         * @since 0.1.0
+         */
+        public Builder with(EmailExtension extension) {
+            Objects.requireNonNull(extension, "extension");
+            extensions.remove(extension.getClass());
+            extensions.put(extension.getClass(), extension);
+            return this;
+        }
+
+        /**
          * Checks every rule and builds the email.
          *
          * @return the email
@@ -657,12 +705,20 @@ public final class Email {
             if (to.isEmpty() && cc.isEmpty() && bcc.isEmpty()) {
                 problems.add("at least one recipient (to, cc or bcc) is required");
             }
-            if (subject == null || Chars.isBlank(subject)) {
-                problems.add("a subject is required");
+            boolean contentSupplied = false;
+            for (EmailExtension extension : extensions.values()) {
+                contentSupplied |= extension.providesContent();
+            }
+            if (subject == null) {
+                if (!contentSupplied) {
+                    problems.add("a subject is required");
+                }
+            } else if (Chars.isBlank(subject)) {
+                problems.add(contentSupplied ? "the subject must not be blank" : "a subject is required");
             } else if (Chars.hasControl(subject)) {
                 problems.add("the subject must not contain line breaks or other control characters");
             }
-            if (text == null && html == null) {
+            if (text == null && html == null && !contentSupplied) {
                 problems.add("a text body, an HTML body or both are required");
             }
             if (text != null && text.isEmpty()) {

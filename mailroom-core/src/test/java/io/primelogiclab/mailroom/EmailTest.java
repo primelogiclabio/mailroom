@@ -344,7 +344,7 @@ class EmailTest {
     void toStringShowsCountsOnly() {
         Email email = minimal().cc("secret.cc@example.com").tag("booking")
                 .attach(Attachment.of("a.pdf", "application/pdf", new byte[] {1})).build();
-        assertThat(email.toString()).isEqualTo("Email[to=1, cc=1, bcc=0, attachments=1, tags=1]")
+        assertThat(email.toString()).isEqualTo("Email[to=1, cc=1, bcc=0, attachments=1, tags=1, extensions=0]")
                 .doesNotContain("player").doesNotContain("Hello").doesNotContain("Hi there");
     }
 
