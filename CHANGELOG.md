@@ -23,5 +23,9 @@ All notable changes to mailroom are listed here. The format follows
   the `FailureKind` classification, `SendFailedException` (kind, transport, status and provider codes, retry-after,
   attempts) and `NoEligibleTransportException` (why each transport was skipped). Addresses in their messages are
   masked.
+- The provider SPI in `spi`: `MailTransport` (with default `precheck`, `sendAsync`, `sendBatch` and `close`),
+  `TransportProvider`, `TransportConfig` and `ConfigKey` (checked, typed properties that reject unknown keys),
+  `SendContext`, `Precheck` and `BatchItemResult`; plus `Secret` (redacted credentials from a value, a supplier or an
+  environment variable) and `InvalidConfigException`.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main
