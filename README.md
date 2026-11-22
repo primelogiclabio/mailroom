@@ -145,23 +145,27 @@ Requires Maven 3.9 or newer (or the included wrapper) and JDK 21 or newer to bui
 ./mvnw verify
 ```
 
-The `-java8` jars are Java 8 bytecode; each one has a `java8-set` file, which tells mailroom-parent 0.2.0 to build it
-for Java 8. Tests that both sets share live in `shared-tests/<core|http|test|tck>`, added to each module's tests;
-tests of one set's implementation stay in that module. To run the tests on another JDK, list it in `~/.m2/toolchains.xml` (see
-[mailroom-parent](https://github.com/primelogiclabio/mailroom-parent#running-the-tests-on-another-jdk)) and pass its
-version:
+The `-java8` jars are Java 8 bytecode; each one has a `java8-set` file, which tells mailroom-parent 0.3.0 to build it
+for Java 8 and run its tests on JDK 8. Tests that both sets share live in `shared-tests/<core|http|test|tck>`, added to each module's tests;
+tests of one set's implementation stay in that module. Each set is tested on its own JDKs: the Java 21 set on 21 and 25,
+the Java 8 set on 8 only, so a build that runs the tests needs JDK 8 in `~/.m2/toolchains.xml` (see
+[mailroom-parent](https://github.com/primelogiclabio/mailroom-parent#running-the-tests-on-another-jdk)). A plain
+`./mvnw verify` tests the Java 21 set on Maven's JDK and the Java 8 set on JDK 8; to test one JDK, pass its version,
+which skips the other set's tests:
 
 ```
 ./mvnw verify -Dtest.jdk=8
+./mvnw verify -Dtest.jdk=25
 ```
 
-CI runs the tests on JDK 8, 21 and 25.
+CI runs the Java 8 set's tests on JDK 8 and the Java 21 set's on JDK 21 and 25.
 
 ## Compatibility
 
 | mailroom | Runs on | Built with |
 | --- | --- | --- |
-| 0.1.x, `-java8` set | Java 8, 21, 25 | Maven 3.9+, JDK 21+, [mailroom-parent](https://github.com/primelogiclabio/mailroom-parent) 0.2.0 |
+| 0.1.x | Java 21, 25 | Maven 3.9+, JDK 21+ and a JDK 8 toolchain, [mailroom-parent](https://github.com/primelogiclabio/mailroom-parent) 0.3.0 |
+| 0.1.x, `-java8` set | Java 8 | The same |
 
 ## License
 
