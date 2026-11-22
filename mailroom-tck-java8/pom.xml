@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.primelogiclab.mailroom</groupId>
+        <artifactId>mailroom</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mailroom-tck-java8</artifactId>
+    <name>mailroom-tck-java8</name>
+    <description>Contract tests that every mailroom transport extends, and a local stub HTTP server to run them against. Java 8 set.</description>
+
+    <properties>
+        <shared.tests>tck</shared.tests>
+        <module.name>io.primelogiclab.mailroom.tck</module.name>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-core-java8</artifactId>
+        </dependency>
+        <!-- The contract base classes are JUnit 5 tests; plain JUnit assertions, so transports don't inherit AssertJ. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+        </dependency>
+        <!-- The self-check runs the contracts against ScriptedTransport and InMemoryTransport; mailroom-test never
+             depends on this module, so there is no cycle. -->
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-test-java8</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Adds shared-tests/tck, the tests this module shares with its Java 21 twin. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

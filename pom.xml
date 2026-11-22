@@ -8,7 +8,7 @@
     <parent>
         <groupId>io.primelogiclab.mailroom</groupId>
         <artifactId>mailroom-parent</artifactId>
-        <version>0.1.0</version>
+        <version>0.2.0</version>
         <relativePath/>
     </parent>
 
@@ -34,10 +34,11 @@
     </issueManagement>
 
     <modules>
-        <module>mailroom-core</module>
-        <module>mailroom-http</module>
-        <module>mailroom-test</module>
-        <module>mailroom-tck</module>
+        <!-- The Java 8 set: a java8-set file in each module. The Java 21 set comes with J-2 and J-3. -->
+        <module>mailroom-core-java8</module>
+        <module>mailroom-http-java8</module>
+        <module>mailroom-test-java8</module>
+        <module>mailroom-tck-java8</module>
     </modules>
 
     <!-- Maven reads the parent before anything it declares, so these entries must be here too. -->
@@ -59,6 +60,7 @@
     <properties>
         <!-- The 2.x line: Jackson 3 needs Java 17. 2.21 is an LTS line. -->
         <jackson.version>2.21.8</jackson.version>
+        <build-helper.version>3.8.0</build-helper.version>
     </properties>
 
     <dependencyManagement>
@@ -70,26 +72,68 @@
             </dependency>
             <dependency>
                 <groupId>io.primelogiclab.mailroom</groupId>
-                <artifactId>mailroom-core</artifactId>
+                <artifactId>mailroom-core-java8</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.primelogiclab.mailroom</groupId>
-                <artifactId>mailroom-http</artifactId>
+                <artifactId>mailroom-http-java8</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.primelogiclab.mailroom</groupId>
-                <artifactId>mailroom-test</artifactId>
+                <artifactId>mailroom-test-java8</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.primelogiclab.mailroom</groupId>
-                <artifactId>mailroom-tck</artifactId>
+                <artifactId>mailroom-tck-java8</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- Tests both Java sets of a module pair run: shared-tests/<shared.tests>/java and /resources.
+                     A module sets shared.tests and lists this plugin in its own build. -->
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>${build-helper.version}</version>
+                    <executions>
+                        <execution>
+                            <id>add-shared-tests</id>
+                            <phase>generate-test-sources</phase>
+                            <goals>
+                                <goal>add-test-source</goal>
+                            </goals>
+                            <configuration>
+                                <sources>
+                                    <source>${project.basedir}/../shared-tests/${shared.tests}/java</source>
+                                </sources>
+                            </configuration>
+                        </execution>
+                        <execution>
+                            <id>add-shared-test-resources</id>
+                            <phase>generate-test-resources</phase>
+                            <goals>
+                                <goal>add-test-resource</goal>
+                            </goals>
+                            <configuration>
+                                <resources>
+                                    <resource>
+                                        <directory>${project.basedir}/../shared-tests/${shared.tests}/resources</directory>
+                                    </resource>
+                                </resources>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 
     <!-- Test libraries for every module; versions come from mailroom-parent. -->
     <dependencies>

@@ -1,0 +1,2 @@
+# This module is in mailroom's Java 8 set: mailroom-parent compiles it for Java 8 and allows only -java8
+# mailroom artifacts. See mailroom-parent's README, "Two Java sets".

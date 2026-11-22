@@ -7,18 +7,22 @@ is a separate module with its own releases, found at runtime with `java.util.Ser
 providers at once, route messages between them and fail over when one is down. Adding a provider never needs a new
 release of the core.
 
-> **Status:** early development, no release yet. `mailroom-core`, `mailroom-test`, `mailroom-http` (HTTP engine, JSON,
-> error mapping) and `mailroom-tck` (contract tests and stub server) work, and the first transports are being built in
-> their own repos. Snapshots are published from `main`.
+> **Status:** early development, no release yet. The Java 8 set works: `mailroom-core-java8`, `mailroom-test-java8`,
+> `mailroom-http-java8` (HTTP engine, JSON, error mapping) and `mailroom-tck-java8` (contract tests and stub server).
+> The Java 21 set, under the unsuffixed names, is being built next, and the first transports in their own repos.
+> Snapshots are published from `main`.
 
 ## Modules
 
-| Artifact | What it holds | Depends on |
+Every module comes in two sets with the same version, packages and API: unsuffixed artifacts compiled for Java 21,
+and `-java8` twins compiled for Java 8. Today the repo holds the Java 8 set; the Java 21 modules come next.
+
+| Artifact (Java 8 set) | What it holds | Depends on |
 | --- | --- | --- |
-| `mailroom-core` | The `Email` model, the `Mailroom` sending API, the router and the provider SPI | JDK only |
-| `mailroom-http` | Shared HTTP and JSON plumbing for provider modules (for provider authors, not application API) | core, jackson-core 2.x |
-| `mailroom-test` | `InMemoryTransport` and `ScriptedTransport` for application tests | core |
-| `mailroom-tck` | Contract tests every transport module extends (mapping, failures, redaction, precheck; see [its README](mailroom-tck/README.md)), and `StubHttpServer`, a local HTTP server that records requests and plays scripted responses, delays and dropped connections | core, junit-jupiter-api |
+| `mailroom-core-java8` | The `Email` model, the `Mailroom` sending API, the router and the provider SPI | JDK only |
+| `mailroom-http-java8` | Shared HTTP and JSON plumbing for provider modules (for provider authors, not application API) | core, jackson-core 2.x |
+| `mailroom-test-java8` | `InMemoryTransport` and `ScriptedTransport` for application tests | core |
+| `mailroom-tck-java8` | Contract tests every transport module extends (mapping, failures, redaction, precheck; see [its README](mailroom-tck-java8/README.md)), and `StubHttpServer`, a local HTTP server that records requests and plays scripted responses, delays and dropped connections | core, junit-jupiter-api |
 
 Provider modules live in their own repos, for example
 [mailroom-smtp](https://github.com/primelogiclabio/mailroom-smtp) and
@@ -133,7 +137,9 @@ Requires Maven 3.9 or newer (or the included wrapper) and JDK 21 or newer to bui
 ./mvnw verify
 ```
 
-The jars are plain Java 8 bytecode. To run the tests on another JDK, list it in `~/.m2/toolchains.xml` (see
+The `-java8` jars are Java 8 bytecode; each one has a `java8-set` file, which tells mailroom-parent 0.2.0 to build it
+for Java 8. Tests that both sets share live in `shared-tests/<core|http|test|tck>`, added to each module's tests;
+tests of one set's implementation stay in that module. To run the tests on another JDK, list it in `~/.m2/toolchains.xml` (see
 [mailroom-parent](https://github.com/primelogiclabio/mailroom-parent#running-the-tests-on-another-jdk)) and pass its
 version:
 
@@ -147,7 +153,7 @@ CI runs the tests on JDK 8, 21 and 25.
 
 | mailroom | Runs on | Built with |
 | --- | --- | --- |
-| 0.1.x | Java 8, 21, 25 | Maven 3.9+, JDK 21+, [mailroom-parent](https://github.com/primelogiclabio/mailroom-parent) 0.1.0 |
+| 0.1.x, `-java8` set | Java 8, 21, 25 | Maven 3.9+, JDK 21+, [mailroom-parent](https://github.com/primelogiclabio/mailroom-parent) 0.2.0 |
 
 ## License
 
