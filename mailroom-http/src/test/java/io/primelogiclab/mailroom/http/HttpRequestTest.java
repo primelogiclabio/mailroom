@@ -63,6 +63,8 @@ class HttpRequestTest {
         assertThat(HttpRequest.delete(API).build().hasBody()).isFalse();
         assertThatThrownBy(() -> HttpRequest.get(API).json("{}"))
                 .isInstanceOf(IllegalArgumentException.class).hasMessage("GET requests have no body");
+        assertThatThrownBy(() -> HttpRequest.get(API).json(new byte[] {'{', '}'}))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("GET requests have no body");
         assertThatThrownBy(() -> HttpRequest.delete(API).body("text/plain", new byte[1]))
                 .hasMessage("DELETE requests have no body");
     }

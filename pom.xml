@@ -56,8 +56,18 @@
         </repository>
     </repositories>
 
+    <properties>
+        <!-- The 2.x line: Jackson 3 needs Java 17. 2.21 is an LTS line. -->
+        <jackson.version>2.21.8</jackson.version>
+    </properties>
+
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
             <dependency>
                 <groupId>io.primelogiclab.mailroom</groupId>
                 <artifactId>mailroom-core</artifactId>

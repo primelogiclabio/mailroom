@@ -1,5 +1,7 @@
 package io.primelogiclab.mailroom.http;
 
+import io.primelogiclab.mailroom.FailureKind;
+import io.primelogiclab.mailroom.SendFailedException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -137,6 +139,46 @@ public final class HttpResponse {
      */
     public String bodyAsString() {
         return new String(body, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * Reads the body of a success response as JSON. Fields the provider adds later are simply never looked at; see
+     * {@link JsonValue}.
+     *
+     * <p>A body that is empty or isn't JSON throws {@link FailureKind#UNKNOWN_OUTCOME}: the provider answered, so the
+     * mail may have gone out, and retrying or failing over could send it twice. The message gives the status and where
+     * the JSON broke, never the body. For error responses, whose bodies are often HTML from a proxy, use
+     * {@link #tryJson()}.
+     *
+     * @return the body as JSON
+     * @throws SendFailedException if the body is empty or not valid JSON; it carries the status code and no cause
+     * @since 0.1.0
+     */
+    public JsonValue json() {
+        try {
+            return JsonValue.parse(body, "the " + statusCode + " response body");
+        } catch (IllegalArgumentException e) {
+            throw SendFailedException.builder(FailureKind.UNKNOWN_OUTCOME, e.getMessage()).statusCode(statusCode)
+                    .build();
+        }
+    }
+
+    /**
+     * Reads the body as JSON if it is JSON, for error responses: an error body may be JSON with the provider's error
+     * code, or an HTML page from a proxy.
+     *
+     * @return the body as JSON; empty if the body is empty or not valid JSON
+     * @since 0.1.0
+     */
+    public Optional<JsonValue> tryJson() {
+        if (body.length == 0) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(JsonValue.parse(body, "the response body"));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
     }
 
     /**

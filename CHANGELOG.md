@@ -57,5 +57,11 @@ All notable changes to mailroom are listed here. The format follows
   a response. An I/O failure throws `SendFailedException`: `UNAVAILABLE` before the request went out, `UNKNOWN_OUTCOME`
   after, including a response cut short. The engine follows the JVM proxy settings, never follows redirects and never
   re-sends a POST.
+- `mailroom-http` JSON on jackson-core 2.21 (streaming only; no Jackson type in the API): `JsonWriter` writes request
+  bodies field by field as UTF-8 (optional fields, string lists, base64, plain `Map`/`List` trees) and fails on
+  duplicate fields, unclosed scopes, NaN and unsupported types; `JsonValue` reads responses tolerantly, so absent or
+  unknown fields never throw, and compares by content. `HttpResponse.json()` throws `SendFailedException`
+  `UNKNOWN_OUTCOME` for an empty or malformed success body, `tryJson()` reads error bodies when they are JSON, and
+  `HttpRequest.Builder.json(byte[])` takes the writer's bytes. Parse errors give the line and column, never the input.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main

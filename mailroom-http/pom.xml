@@ -23,6 +23,11 @@
             <groupId>io.primelogiclab.mailroom</groupId>
             <artifactId>mailroom-core</artifactId>
         </dependency>
+        <!-- Streaming API only (JsonWriter, JsonValue); no Jackson type appears in this module's API. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
         <!-- StubHttpServer for the engine tests; mailroom-tck never depends on this module, so there is no cycle. -->
         <dependency>
             <groupId>io.primelogiclab.mailroom</groupId>
