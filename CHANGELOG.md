@@ -74,5 +74,8 @@ All notable changes to mailroom are listed here. The format follows
   kind, status and retry-after, naming the transport), `RedactionContract` (the credential and full addresses never
   show in exceptions, `toString`s or log records) and `PrecheckContract`; `HttpFailureCases` has the standard HTTP
   cases for `StubHttpServer`. `ScriptedTransport` and `InMemoryTransport` pass them.
+- `mailroom-http` keeps the JDK's `HttpURLConnection` from logging credentials: it logs every request header at
+  `FINE` on `sun.net.www.protocol.http.HttpURLConnection`, so the engine sets that logger to `INFO` while its level is
+  inherited, and logs one `WARNING` if the application set it to `FINE` or below itself.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main

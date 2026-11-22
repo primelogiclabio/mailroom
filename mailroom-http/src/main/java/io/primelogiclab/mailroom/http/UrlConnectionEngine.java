@@ -19,9 +19,14 @@ import java.util.Objects;
  *
  * <p>Two {@code HttpURLConnection} habits matter here. It re-sends a POST that failed unless the body is streamed, so
  * every body goes out in fixed-length streaming mode. And it can hand back a body cut short by a closed connection
- * without an error, so the bytes read are checked against {@code Content-Length}.
+ * without an error, so the bytes read are checked against {@code Content-Length}. A third, its header logging, is
+ * kept in check by {@link JdkHttpLogging}.
  */
 final class UrlConnectionEngine implements HttpEngine {
+
+    UrlConnectionEngine() {
+        JdkHttpLogging.guard();
+    }
 
     @Override
     public String name() {
@@ -31,6 +36,7 @@ final class UrlConnectionEngine implements HttpEngine {
     @Override
     public HttpResponse execute(HttpRequest request) {
         Objects.requireNonNull(request, "request");
+        JdkHttpLogging.guard();     // the JDK would log every header, credentials included, at FINE
         HttpURLConnection conn = null;
         boolean sent = false;
         boolean done = false;

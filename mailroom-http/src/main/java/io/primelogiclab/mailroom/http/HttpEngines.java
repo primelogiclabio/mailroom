@@ -78,6 +78,11 @@ public final class HttpEngines {
      * <p>It streams every body so that {@code HttpURLConnection} can't re-send it, and in that mode the JDK drops the
      * body of a 401 or 407 response unread: those come back with their status and headers but an empty body.
      *
+     * <p>The JDK logs every request header, credentials included, at {@code FINE} on the {@code java.util.logging}
+     * logger {@code sun.net.www.protocol.http.HttpURLConnection}. Unless the application set that logger's level
+     * itself, the engine sets it to {@code INFO}, when created and before each request; if the application set it to
+     * {@code FINE} or below, the engine leaves it and logs one {@code WARNING}. See the package documentation.
+     *
      * @return the engine
      * @since 0.1.0
      */

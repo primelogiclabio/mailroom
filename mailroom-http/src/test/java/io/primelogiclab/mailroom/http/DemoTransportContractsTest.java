@@ -10,9 +10,7 @@ import io.primelogiclab.mailroom.tck.StubHttpServer;
 import io.primelogiclab.mailroom.tck.StubResponse;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -73,11 +71,6 @@ class DemoTransportContractsTest {
         protected List<FailureCase> failureCases() {
             return cases();
         }
-
-        /** The JDK logs every request header, the API key included, at FINE; nothing in mailroom can stop it. */
-        @Override
-        protected Set<String> ignoredLoggers() {
-            return Collections.singleton("sun.net.www.protocol.http.HttpURLConnection");
-        }
+        // no ignoredLoggers(): the engine pins the JDK's HttpURLConnection logger to INFO (JdkHttpLogging)
     }
 }
