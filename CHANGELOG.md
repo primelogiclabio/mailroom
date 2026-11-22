@@ -48,5 +48,8 @@ All notable changes to mailroom are listed here. The format follows
 - `MailroomListener` for metrics and tracing (`onSkip`, `onAttempt`, `onSuccess`, `onFailure`), added with
   `MailroomBuilder.listener(...)` or `Mailroom.fromProperties(properties, listener)`; an exception from a listener is
   logged and ignored.
+- `mailroom-tck`: `StubHttpServer`, a loopback HTTP server on the JDK's `com.sun.net.httpserver` that records each
+  request (`RecordedRequest`, whose `toString` never shows header values or the body) and plays scripted
+  `StubResponse`s: status, headers and body, a delay, a dropped connection, or a body cut short.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main
