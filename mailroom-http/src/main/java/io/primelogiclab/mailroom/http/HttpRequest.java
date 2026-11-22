@@ -501,6 +501,20 @@ public final class HttpRequest {
         }
 
         /**
+         * Sets a JSON body that is already UTF-8, such as {@link JsonWriter#toBytes()}, sent with
+         * {@code Content-Type: application/json; charset=utf-8}.
+         *
+         * @param utf8Json the JSON as UTF-8 bytes; copied
+         * @return this builder
+         * @throws IllegalArgumentException if the method is GET or DELETE
+         * @since 0.1.0
+         */
+        public Builder json(byte[] utf8Json) {
+            Objects.requireNonNull(utf8Json, "utf8Json");
+            return body(JSON, utf8Json);
+        }
+
+        /**
          * Sets the connect timeout.
          *
          * @param timeout from 1 ms to {@code Integer.MAX_VALUE} ms

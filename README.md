@@ -8,7 +8,7 @@ providers at once, route messages between them and fail over when one is down. A
 release of the core.
 
 > **Status:** early development, no release yet. `mailroom-core` and `mailroom-test` work; `mailroom-http` has its
-> HTTP engine (JSON and error mapping are next), `mailroom-tck` its stub server (the contract tests are next), and the
+> HTTP engine and JSON writer and reader (error mapping is next), `mailroom-tck` its stub server (the contract tests are next), and the
 > first transports are being built in their own repos. Snapshots are published from `main`.
 
 ## Modules
@@ -16,7 +16,7 @@ release of the core.
 | Artifact | What it holds | Depends on |
 | --- | --- | --- |
 | `mailroom-core` | The `Email` model, the `Mailroom` sending API, the router and the provider SPI | JDK only |
-| `mailroom-http` | Shared HTTP and JSON plumbing for provider modules (for provider authors, not application API) | core |
+| `mailroom-http` | Shared HTTP and JSON plumbing for provider modules (for provider authors, not application API) | core, jackson-core 2.x |
 | `mailroom-test` | `InMemoryTransport` and `ScriptedTransport` for application tests | core |
 | `mailroom-tck` | Contract tests every transport module runs, and `StubHttpServer`, a local HTTP server that records requests and plays scripted responses, delays and dropped connections | core |
 
