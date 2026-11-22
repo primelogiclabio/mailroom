@@ -1,4 +1,4 @@
-# From mailroom-parent 0.1.0 templates/ci.yml. Keep it in step with that template.
+# From mailroom-parent templates/ci.yml (unreleased, after 0.1.0). Keep it in step with that template.
 name: ci
 
 on:
@@ -32,13 +32,28 @@ jobs:
       - name: Build and test on JDK ${{ matrix.jdk }}
         run: ./mvnw -B verify -Dtest.jdk=${{ matrix.jdk }}
 
-  # The one required check in the branch ruleset: fails unless every matrix job passed.
+  # The release profile's sources and Javadoc jars, so a Javadoc error fails here instead of in release.yml after
+  # the tag, where Reposilite would already hold part of the version. The matrix runs the tests.
+  release-build:
+    name: release build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Build with -P release (sources and Javadoc)
+        run: ./mvnw -B verify -P release -DskipTests
+
+  # The one required check in the branch ruleset: fails unless every matrix job and the release build passed.
   build-ok:
-    needs: test
+    needs: [test, release-build]
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - run: test "${{ needs.test.result }}" = success
+      - run: test "${{ needs.test.result }}" = success && test "${{ needs.release-build.result }}" = success
 
   deploy-snapshot:
     needs: build-ok
