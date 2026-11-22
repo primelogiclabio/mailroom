@@ -5,6 +5,12 @@ All notable changes to mailroom are listed here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The Java 8 modules are now the Java 8 set: `mailroom-core-java8`, `mailroom-http-java8`, `mailroom-test-java8` and
+  `mailroom-tck-java8` (packages and module names unchanged), on mailroom-parent 0.2.0. The unsuffixed artifactIds
+  will be the Java 21 set. Tests both sets share moved to `shared-tests/`.
+
 ### Added
 
 - Module skeleton on mailroom-parent 0.1.0: `mailroom-core`, `mailroom-http`, `mailroom-test` and `mailroom-tck`,
