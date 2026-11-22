@@ -69,5 +69,10 @@ All notable changes to mailroom are listed here. The format follows
   `REJECTED`, other 5xx `UNAVAILABLE`) that each provider adjusts with rules, status-and-code and status entries.
   `RetryAfter` reads seconds and all three HTTP date forms; `RateLimit` reads `RateLimit-*` and `X-RateLimit-*`
   headers, with Unix-time or relative resets.
+- `mailroom-tck` contract tests, JUnit 5 base classes each transport extends: `MappingContract` (every canonical email
+  of `TckEmails` arrives intact, decoded back by the transport), `FailureContract` (`FailureCase`s throw the expected
+  kind, status and retry-after, naming the transport), `RedactionContract` (the credential and full addresses never
+  show in exceptions, `toString`s or log records) and `PrecheckContract`; `HttpFailureCases` has the standard HTTP
+  cases for `StubHttpServer`. `ScriptedTransport` and `InMemoryTransport` pass them.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main

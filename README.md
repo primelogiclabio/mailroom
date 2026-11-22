@@ -7,9 +7,9 @@ is a separate module with its own releases, found at runtime with `java.util.Ser
 providers at once, route messages between them and fail over when one is down. Adding a provider never needs a new
 release of the core.
 
-> **Status:** early development, no release yet. `mailroom-core` and `mailroom-test` work; `mailroom-http` has its
-> HTTP engine, JSON writer and reader, and error mapping, `mailroom-tck` its stub server (the contract tests are next), and the
-> first transports are being built in their own repos. Snapshots are published from `main`.
+> **Status:** early development, no release yet. `mailroom-core`, `mailroom-test`, `mailroom-http` (HTTP engine, JSON,
+> error mapping) and `mailroom-tck` (contract tests and stub server) work, and the first transports are being built in
+> their own repos. Snapshots are published from `main`.
 
 ## Modules
 
@@ -18,7 +18,7 @@ release of the core.
 | `mailroom-core` | The `Email` model, the `Mailroom` sending API, the router and the provider SPI | JDK only |
 | `mailroom-http` | Shared HTTP and JSON plumbing for provider modules (for provider authors, not application API) | core, jackson-core 2.x |
 | `mailroom-test` | `InMemoryTransport` and `ScriptedTransport` for application tests | core |
-| `mailroom-tck` | Contract tests every transport module runs, and `StubHttpServer`, a local HTTP server that records requests and plays scripted responses, delays and dropped connections | core |
+| `mailroom-tck` | Contract tests every transport module extends (mapping, failures, redaction, precheck; see [its README](mailroom-tck/README.md)), and `StubHttpServer`, a local HTTP server that records requests and plays scripted responses, delays and dropped connections | core, junit-jupiter-api |
 
 Provider modules live in their own repos, for example
 [mailroom-smtp](https://github.com/primelogiclabio/mailroom-smtp) and

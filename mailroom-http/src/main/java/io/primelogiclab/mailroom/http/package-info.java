@@ -10,5 +10,10 @@
  *
  * <p><strong>This is a support library for provider authors, not application API.</strong> Applications use
  * {@code mailroom-core}; this module may change in ways that only provider modules need to follow.
+ *
+ * <p><strong>Logging:</strong> nothing here logs header values, but the JDK's {@code HttpURLConnection}, which the
+ * default engine uses, logs every request header, credentials included, at {@code FINE} on the
+ * {@code sun.net.www.protocol.http.HttpURLConnection} logger. Applications should keep that logger at {@code INFO} or
+ * above; transports should say so in their documentation.
  */
 package io.primelogiclab.mailroom.http;
