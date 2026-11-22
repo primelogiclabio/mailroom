@@ -23,5 +23,11 @@
             <groupId>io.primelogiclab.mailroom</groupId>
             <artifactId>mailroom-core</artifactId>
         </dependency>
+        <!-- StubHttpServer for the engine tests; mailroom-tck never depends on this module, so there is no cycle. -->
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-tck</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

@@ -7,9 +7,9 @@ is a separate module with its own releases, found at runtime with `java.util.Ser
 providers at once, route messages between them and fail over when one is down. Adding a provider never needs a new
 release of the core.
 
-> **Status:** early development, no release yet. `mailroom-core` and `mailroom-test` work; `mailroom-http` and
-> `mailroom-tck` are still empty, and the first transports are being built in their own repos. Snapshots are
-> published from `main`.
+> **Status:** early development, no release yet. `mailroom-core` and `mailroom-test` work; `mailroom-http` has its
+> HTTP engine (JSON and error mapping are next), `mailroom-tck` its stub server (the contract tests are next), and the
+> first transports are being built in their own repos. Snapshots are published from `main`.
 
 ## Modules
 
