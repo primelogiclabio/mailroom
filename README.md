@@ -8,7 +8,7 @@ providers at once, route messages between them and fail over when one is down. A
 release of the core.
 
 > **Status:** early development, no release yet. `mailroom-core` and `mailroom-test` work; `mailroom-http` has its
-> HTTP engine and JSON writer and reader (error mapping is next), `mailroom-tck` its stub server (the contract tests are next), and the
+> HTTP engine, JSON writer and reader, and error mapping, `mailroom-tck` its stub server (the contract tests are next), and the
 > first transports are being built in their own repos. Snapshots are published from `main`.
 
 ## Modules

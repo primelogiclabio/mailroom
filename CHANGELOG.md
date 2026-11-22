@@ -63,5 +63,11 @@ All notable changes to mailroom are listed here. The format follows
   unknown fields never throw, and compares by content. `HttpResponse.json()` throws `SendFailedException`
   `UNKNOWN_OUTCOME` for an empty or malformed success body, `tryJson()` reads error bodies when they are JSON, and
   `HttpRequest.Builder.json(byte[])` takes the writer's bytes. Parse errors give the line and column, never the input.
+- `mailroom-http` error mapping: `FailureMapper` turns an error response into a `SendFailedException` (kind, status,
+  provider id and code, retry-after; never the body) by a default status table (400/413/422 `INVALID_MESSAGE`,
+  401/403/407 `AUTHENTICATION`, 408/425 `UNAVAILABLE`, 409 and 504 `UNKNOWN_OUTCOME`, 429 `RATE_LIMITED`, other 4xx
+  `REJECTED`, other 5xx `UNAVAILABLE`) that each provider adjusts with rules, status-and-code and status entries.
+  `RetryAfter` reads seconds and all three HTTP date forms; `RateLimit` reads `RateLimit-*` and `X-RateLimit-*`
+  headers, with Unix-time or relative resets.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main

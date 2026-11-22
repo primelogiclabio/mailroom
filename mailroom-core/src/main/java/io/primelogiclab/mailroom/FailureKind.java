@@ -45,8 +45,8 @@ public enum FailureKind {
     RATE_LIMITED,
 
     /**
-     * The provider can't be reached or is failing: HTTP 5xx, connection refused, DNS or TLS failure. Retried once on
-     * the same transport after a short backoff, then fails over.
+     * The provider can't be reached or is failing: HTTP 5xx other than 504, connection refused, DNS or TLS failure.
+     * Retried once on the same transport after a short backoff, then fails over.
      *
      * @since 0.1.0
      */
@@ -54,7 +54,7 @@ public enum FailureKind {
 
     /**
      * It is unclear whether the provider accepted the message: a timeout after the request was sent, or an error after
-     * which the mail may still go out. Not retried, and by default not failed over, because a second provider could
+     * which the mail may still go out, such as a gateway's 504. Not retried, and by default not failed over, because a second provider could
      * deliver a duplicate; failing over is safe only with an idempotency key the next provider honours.
      *
      * @since 0.1.0
