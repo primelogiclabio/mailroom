@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.primelogiclab.mailroom</groupId>
+        <artifactId>mailroom</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mailroom-api-check</artifactId>
+    <name>mailroom-api-check</name>
+    <description>Build check, never published: compares the public API of the Java 21 set and the Java 8 set, module pair by module pair, against the differences listed in api-differences.txt.</description>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <maven.install.skip>true</maven.install.skip>
+        <!-- With no main classes, incremental test compilation warns that it can't read target/classes. -->
+        <maven.compiler.useIncrementalCompilation>false</maven.compiler.useIncrementalCompilation>
+    </properties>
+
+    <!-- Both sets, so the reactor builds them first. They stay off the test classpath (see Surefire below): the test
+         loads each set in a class loader of its own. -->
+    <dependencies>
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-http</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-tck</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-core-java8</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-http-java8</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-test-java8</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-tck-java8</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- The one module allowed to depend on both sets: mailroom-parent's Java 21 set rule would refuse the
+                 -java8 artifacts. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-java21-set</id>
+                        <phase>none</phase>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Sets a groupId:artifactId:jar property to each dependency's file, for the test below. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>artifact-paths</id>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <classpathDependencyExcludes>
+                        <classpathDependencyExclude>io.primelogiclab.mailroom:mailroom-core</classpathDependencyExclude>
+                        <classpathDependencyExclude>io.primelogiclab.mailroom:mailroom-http</classpathDependencyExclude>
+                        <classpathDependencyExclude>io.primelogiclab.mailroom:mailroom-test</classpathDependencyExclude>
+                        <classpathDependencyExclude>io.primelogiclab.mailroom:mailroom-tck</classpathDependencyExclude>
+                        <classpathDependencyExclude>io.primelogiclab.mailroom:mailroom-core-java8</classpathDependencyExclude>
+                        <classpathDependencyExclude>io.primelogiclab.mailroom:mailroom-http-java8</classpathDependencyExclude>
+                        <classpathDependencyExclude>io.primelogiclab.mailroom:mailroom-test-java8</classpathDependencyExclude>
+                        <classpathDependencyExclude>io.primelogiclab.mailroom:mailroom-tck-java8</classpathDependencyExclude>
+                    </classpathDependencyExcludes>
+                    <systemPropertyVariables>
+                        <api.core.21>${io.primelogiclab.mailroom:mailroom-core:jar}</api.core.21>
+                        <api.http.21>${io.primelogiclab.mailroom:mailroom-http:jar}</api.http.21>
+                        <api.test.21>${io.primelogiclab.mailroom:mailroom-test:jar}</api.test.21>
+                        <api.tck.21>${io.primelogiclab.mailroom:mailroom-tck:jar}</api.tck.21>
+                        <api.core.8>${io.primelogiclab.mailroom:mailroom-core-java8:jar}</api.core.8>
+                        <api.http.8>${io.primelogiclab.mailroom:mailroom-http-java8:jar}</api.http.8>
+                        <api.test.8>${io.primelogiclab.mailroom:mailroom-test-java8:jar}</api.test.8>
+                        <api.tck.8>${io.primelogiclab.mailroom:mailroom-tck-java8:jar}</api.tck.8>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <skipIfEmpty>true</skipIfEmpty>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

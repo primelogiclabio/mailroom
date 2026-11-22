@@ -88,6 +88,20 @@ class SpiValuesTest {
             assertThatThrownBy(() -> SendContext.builder().executor(null)).isInstanceOf(NullPointerException.class);
             assertThatThrownBy(() -> SendContext.builder().clock(null)).isInstanceOf(NullPointerException.class);
         }
+
+        @Test
+        void comparesByValue() {
+            Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+            SendContext c = SendContext.builder().attempt(2).clock(clock).deadline(NOW.plusSeconds(30)).build();
+            SendContext same = SendContext.builder().attempt(2).clock(clock).deadline(NOW.plusSeconds(30)).build();
+            assertThat(c).isEqualTo(same).hasSameHashCodeAs(same);
+            assertThat(SendContext.builder().build()).isEqualTo(SendContext.builder().build());
+            assertThat(c).isNotEqualTo(
+                    SendContext.builder().attempt(3).clock(clock).deadline(NOW.plusSeconds(30)).build());
+            assertThat(c).isNotEqualTo(SendContext.builder().attempt(2).clock(clock).build());
+            assertThat(c).isNotEqualTo(SendContext.builder().attempt(2).clock(clock).deadline(NOW.plusSeconds(30))
+                    .executor(Runnable::run).build());
+        }
     }
 
     @Nested
@@ -131,6 +145,21 @@ class SpiValuesTest {
             assertThat(bad.result()).isEmpty();
             assertThat(bad.toString()).isEqualTo("BatchItemResult[REJECTED: no]");
             assertThatThrownBy(() -> BatchItemResult.succeeded(null)).isInstanceOf(NullPointerException.class);
+        }
+
+        @Test
+        void comparesByValue() {
+            SendResult result = SendResult.builder().transportName("t").providerId("p").acceptedAt(NOW).build();
+            SendResult equalResult = SendResult.builder().transportName("t").providerId("p").acceptedAt(NOW).build();
+            SendFailedException failure = SendFailedException.builder(FailureKind.REJECTED, "no").build();
+            BatchItemResult ok = BatchItemResult.succeeded(result);
+            BatchItemResult equalOk = BatchItemResult.succeeded(equalResult);
+            assertThat(ok).isEqualTo(equalOk).hasSameHashCodeAs(equalOk);
+            assertThat(BatchItemResult.failed(failure)).isEqualTo(BatchItemResult.failed(failure));
+            // exceptions compare by identity, as Throwable does
+            SendFailedException sameText = SendFailedException.builder(FailureKind.REJECTED, "no").build();
+            assertThat(BatchItemResult.failed(failure)).isNotEqualTo(BatchItemResult.failed(sameText));
+            assertThat(ok).isNotEqualTo(BatchItemResult.failed(failure));
         }
     }
 }

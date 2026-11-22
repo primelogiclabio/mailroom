@@ -75,6 +75,29 @@ public final class BatchItemResult {
     }
 
     /**
+     * Two items are equal when they hold equal results, or the same failure.
+     *
+     * @param other the object to compare with
+     * @return true if equal
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof BatchItemResult)) {
+            return false;
+        }
+        BatchItemResult that = (BatchItemResult) other;
+        return Objects.equals(result, that.result) && Objects.equals(failure, that.failure);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(result, failure);
+    }
+
+    /**
      * Describes the item, such as {@code BatchItemResult[SendResult[...]]} or
      * {@code BatchItemResult[UNAVAILABLE via primary: ...]}.
      *

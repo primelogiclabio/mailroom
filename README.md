@@ -160,6 +160,12 @@ which skips the other set's tests:
 
 CI runs the Java 8 set's tests on JDK 8 and the Java 21 set's on JDK 21 and 25.
 
+`mailroom-api-check`, a test-only module that is never published, compares the two sets' public API module pair by
+module pair: every public type outside `internal` packages and its public and protected members, with their generic
+signatures. It fails on any difference not listed in
+[`api-differences.txt`](mailroom-api-check/src/test/resources/api-differences.txt), and on listed ones that no longer
+occur. When it fails it prints the exact lines; make the sets match, or add the line with a comment saying why.
+
 ## Compatibility
 
 | mailroom | Runs on | Built with |
