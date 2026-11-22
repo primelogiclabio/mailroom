@@ -18,7 +18,7 @@ release of the core.
 | `mailroom-core` | The `Email` model, the `Mailroom` sending API, the router and the provider SPI | JDK only |
 | `mailroom-http` | Shared HTTP and JSON plumbing for provider modules (for provider authors, not application API) | core |
 | `mailroom-test` | `InMemoryTransport` and `ScriptedTransport` for application tests | core |
-| `mailroom-tck` | Contract tests every transport module runs | core |
+| `mailroom-tck` | Contract tests every transport module runs, and `StubHttpServer`, a local HTTP server that records requests and plays scripted responses, delays and dropped connections | core |
 
 Provider modules live in their own repos, for example
 [mailroom-smtp](https://github.com/primelogiclabio/mailroom-smtp) and
