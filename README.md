@@ -9,8 +9,8 @@ release of the core.
 
 > **Status:** early development, no release yet. The Java 8 set works: `mailroom-core-java8`, `mailroom-test-java8`,
 > `mailroom-http-java8` (HTTP engine, JSON, error mapping) and `mailroom-tck-java8` (contract tests and stub server).
-> In the Java 21 set, under the unsuffixed names, `mailroom-core` and `mailroom-test` work; `mailroom-http` and
-> `mailroom-tck` come next, and the first transports are being built in their own repos.
+> The Java 21 set, under the unsuffixed names (`mailroom-core`, `mailroom-test`, `mailroom-http`, `mailroom-tck`),
+> works too, and the first transports are being built in their own repos.
 > Snapshots are published from `main`.
 
 ## Modules
@@ -18,12 +18,15 @@ release of the core.
 Every module comes in two sets with the same version, packages and API: unsuffixed artifacts compiled for Java 21,
 and `-java8` twins compiled for Java 8. The Java 21 set implements the same API with records (`SendResult`,
 `Attempt`, `Precheck`, `Capability`, `TransportCapabilities`, `SendContext`, `BatchItemResult`), a sealed
-`MailroomException` hierarchy and virtual threads without reflection.
+`MailroomException` hierarchy, virtual threads without reflection, and `java.net.http.HttpClient` as
+`mailroom-http`'s built-in engine (the `HttpURLConnection` one stays available as `HttpEngines.urlConnection()`).
 
 | Artifact | What it holds | Depends on |
 | --- | --- | --- |
 | `mailroom-core` (Java 21) | The same as `mailroom-core-java8` | JDK only |
 | `mailroom-test` (Java 21) | The same as `mailroom-test-java8` | core |
+| `mailroom-http` (Java 21) | The same as `mailroom-http-java8`, with the `HttpClient` engine built in | core, jackson-core 2.x |
+| `mailroom-tck` (Java 21) | The same as `mailroom-tck-java8` | core, junit-jupiter-api |
 | `mailroom-core-java8` | The `Email` model, the `Mailroom` sending API, the router and the provider SPI | JDK only |
 | `mailroom-http-java8` | Shared HTTP and JSON plumbing for provider modules (for provider authors, not application API) | core, jackson-core 2.x |
 | `mailroom-test-java8` | `InMemoryTransport` and `ScriptedTransport` for application tests | core |

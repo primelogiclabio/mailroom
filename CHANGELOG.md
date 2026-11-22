@@ -18,6 +18,10 @@ All notable changes to mailroom are listed here. The format follows
   `BatchItemResult` as records (each also gets a public canonical constructor), a sealed `MailroomException` whose
   four subclasses stay open, a switch expression over `FailureKind` in the router, and a virtual thread per
   `sendAsync` without reflection.
+- The Java 21 set's `mailroom-http` and `mailroom-tck`, passing the same shared tests as their twins.
+  `HttpEngines.load()` falls back to a built-in engine on `java.net.http.HttpClient` (`httpclient`): HTTP/1.1, no
+  redirects, the JVM's proxy settings read at each request, no POST re-sent; a failure to connect, resolve, tunnel or
+  shake hands is `UNAVAILABLE`, anything after connecting `UNKNOWN_OUTCOME`. `HttpEngines.urlConnection()` stays.
 
 - Module skeleton on mailroom-parent 0.1.0: `mailroom-core`, `mailroom-http`, `mailroom-test` and `mailroom-tck`,
   each with its `Automatic-Module-Name` and a smoke test, built as Java 8 bytecode and tested on JDK 8, 21 and 25.

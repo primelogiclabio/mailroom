@@ -37,6 +37,8 @@
         <!-- The Java 21 set: no java8-set file, so mailroom-parent builds them for Java 21. -->
         <module>mailroom-core</module>
         <module>mailroom-test</module>
+        <module>mailroom-http</module>
+        <module>mailroom-tck</module>
         <!-- The Java 8 set: a java8-set file in each module. -->
         <module>mailroom-core-java8</module>
         <module>mailroom-http-java8</module>
@@ -81,6 +83,16 @@
             <dependency>
                 <groupId>io.primelogiclab.mailroom</groupId>
                 <artifactId>mailroom-test</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.primelogiclab.mailroom</groupId>
+                <artifactId>mailroom-http</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.primelogiclab.mailroom</groupId>
+                <artifactId>mailroom-tck</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
