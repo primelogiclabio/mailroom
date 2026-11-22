@@ -12,7 +12,7 @@
 
     <artifactId>mailroom-tck</artifactId>
     <name>mailroom-tck</name>
-    <description>Contract tests that every mailroom transport runs against a local stub HTTP server.</description>
+    <description>Contract tests that every mailroom transport extends, and a local stub HTTP server to run them against.</description>
 
     <properties>
         <module.name>io.primelogiclab.mailroom.tck</module.name>
@@ -22,6 +22,18 @@
         <dependency>
             <groupId>io.primelogiclab.mailroom</groupId>
             <artifactId>mailroom-core</artifactId>
+        </dependency>
+        <!-- The contract base classes are JUnit 5 tests; plain JUnit assertions, so transports don't inherit AssertJ. -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+        </dependency>
+        <!-- The self-check runs the contracts against ScriptedTransport and InMemoryTransport; mailroom-test never
+             depends on this module, so there is no cycle. -->
+        <dependency>
+            <groupId>io.primelogiclab.mailroom</groupId>
+            <artifactId>mailroom-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>
