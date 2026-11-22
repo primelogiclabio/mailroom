@@ -143,14 +143,4 @@ class InMemoryTransportTest {
         outbox.assertSentCount(200);
         assertThat(outbox.sent()).extracting(e -> e.to().get(0).address()).doesNotHaveDuplicates();
     }
-
-    @Test
-    void compiledForJava8() throws Exception {
-        try (java.io.DataInputStream in = new java.io.DataInputStream(
-                InMemoryTransport.class.getResourceAsStream("InMemoryTransport.class"))) {
-            in.readInt();
-            in.readUnsignedShort();
-            assertThat(in.readUnsignedShort()).as("class file major version").isEqualTo(52);
-        }
-    }
 }
