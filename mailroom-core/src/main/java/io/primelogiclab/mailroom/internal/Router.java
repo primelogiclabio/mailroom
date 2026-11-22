@@ -5,6 +5,7 @@ import io.primelogiclab.mailroom.Attempt;
 import io.primelogiclab.mailroom.Email;
 import io.primelogiclab.mailroom.EmailExtension;
 import io.primelogiclab.mailroom.FailureKind;
+import io.primelogiclab.mailroom.MailroomListener;
 import io.primelogiclab.mailroom.NoEligibleTransportException;
 import io.primelogiclab.mailroom.SendFailedException;
 import io.primelogiclab.mailroom.SendResult;
@@ -46,6 +47,8 @@ import java.util.concurrent.ThreadLocalRandom;
  * </ul>
  * Any other exception a transport throws counts as {@code UNKNOWN_OUTCOME}.
  *
+ * <p>Each skip, attempt, success and failure is logged and reported to the listeners through an {@link Observer}.
+ *
  * <p>The router is immutable and keeps no state between sends, so it is thread-safe. Health tracking (circuit
  * breaker, cooling after a rate limit) and rule-based routes come later.
  */
@@ -86,6 +89,7 @@ public final class Router {
     private final Executor executor;
     private final Clock clock;
     private final Sleeper sleeper;
+    private final Observer observer;
 
     private Router(Builder b, List<String> defaultRoute) {
         this.transports = Collections.unmodifiableMap(new LinkedHashMap<String, MailTransport>(b.transports));
@@ -96,6 +100,7 @@ public final class Router {
         this.executor = b.executor;
         this.clock = b.clock;
         this.sleeper = b.sleeper;
+        this.observer = new Observer(b.listeners);
     }
 
     /**
@@ -162,16 +167,22 @@ public final class Router {
             if (reason == null) {
                 eligible.add(transport);
             } else {
-                skipped.put(name, reason);
+                String masked = Masking.addressesIn(reason);
+                skipped.put(name, masked);
+                observer.skipped(email, name, masked);
             }
         }
         if (eligible.isEmpty()) {
-            throw new NoEligibleTransportException(skipped);
+            NoEligibleTransportException none = new NoEligibleTransportException(skipped);
+            observer.failed(email, none);
+            throw none;
         }
 
         List<Attempt> attempts = new ArrayList<Attempt>();
         SendFailedException last = null;
-        for (MailTransport transport : eligible) {
+        for (int t = 0; t < eligible.size(); t++) {
+            MailTransport transport = eligible.get(t);
+            boolean lastTransport = t == eligible.size() - 1;
             int attempt = 1;
             while (true) {
                 Instant startedAt = clock.instant();
@@ -179,9 +190,13 @@ public final class Router {
                 SendFailedException failure;
                 try {
                     SendResult result = transport.send(email, context(attempt));
-                    attempts.add(Attempt.succeeded(transport.name(), transport.providerId(), startedAt,
-                            elapsed(start)));
-                    return result.toBuilder().attempts(attempts).build();
+                    Attempt succeeded = Attempt.succeeded(transport.name(), transport.providerId(), startedAt,
+                            elapsed(start));
+                    attempts.add(succeeded);
+                    observer.attempted(email, attempt, succeeded, null, null);
+                    SendResult withAttempts = result.toBuilder().attempts(attempts).build();
+                    observer.succeeded(email, withAttempts);
+                    return withAttempts;
                 } catch (SendFailedException e) {
                     failure = e;
                 } catch (RuntimeException e) {
@@ -189,27 +204,41 @@ public final class Router {
                             e.getClass().getSimpleName() + " from transport").transportName(transport.name())
                             .providerId(transport.providerId()).cause(e).build();
                 }
-                attempts.add(Attempt.failed(transport.name(), transport.providerId(), startedAt, elapsed(start),
-                        failure));
+                Attempt failed = Attempt.failed(transport.name(), transport.providerId(), startedAt, elapsed(start),
+                        failure);
+                attempts.add(failed);
                 last = failure;
                 Next next = decide(failure, attempt);
+                Duration wait = next != Next.RETRY ? null
+                        : failure.kind() == FailureKind.RATE_LIMITED ? failure.retryAfter().get()
+                        : jittered(retryBackoff);
+                observer.attempted(email, attempt, failed, failure, next == Next.RETRY
+                        ? "retrying in " + wait.toMillis() + " ms"
+                        : next == Next.NEXT_TRANSPORT && !lastTransport ? "trying the next transport"
+                        : next == Next.NEXT_TRANSPORT ? "no transports left" : "stopping");
                 if (next == Next.STOP) {
-                    throw withAttempts(failure, attempts);
+                    throw fail(email, failure, attempts);
                 }
                 if (next == Next.NEXT_TRANSPORT) {
                     break;
                 }
                 try {
-                    sleeper.sleep(failure.kind() == FailureKind.RATE_LIMITED
-                            ? failure.retryAfter().get() : jittered(retryBackoff));
+                    sleeper.sleep(wait);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw withAttempts(failure, attempts);
+                    throw fail(email, failure, attempts);
                 }
                 attempt++;
             }
         }
-        throw withAttempts(last, attempts);
+        throw fail(email, last, attempts);
+    }
+
+    /** Adds the attempts to the failure and reports it; the caller throws the result. */
+    private SendFailedException fail(Email email, SendFailedException failure, List<Attempt> attempts) {
+        SendFailedException withAttempts = failure.toBuilder().attempts(attempts).build();
+        observer.failed(email, withAttempts);
+        return withAttempts;
     }
 
     private Next decide(SendFailedException failure, int attempt) {
@@ -292,10 +321,6 @@ public final class Router {
         return SendContext.builder().attempt(attempt).executor(executor).clock(clock).build();
     }
 
-    private static SendFailedException withAttempts(SendFailedException failure, List<Attempt> attempts) {
-        return failure.toBuilder().attempts(attempts).build();
-    }
-
     private static Duration elapsed(long startNanos) {
         return Duration.ofNanos(Math.max(0, System.nanoTime() - startNanos));
     }
@@ -348,8 +373,20 @@ public final class Router {
         private Executor executor = CALLING_THREAD;
         private Clock clock = Clock.systemUTC();
         private Sleeper sleeper = THREAD_SLEEP;
+        private final List<MailroomListener> listeners = new ArrayList<MailroomListener>();
 
         private Builder() {
+        }
+
+        /**
+         * Adds a listener; listeners are called in the order added.
+         *
+         * @param listener the listener
+         * @return this builder
+         */
+        public Builder listener(MailroomListener listener) {
+            listeners.add(Objects.requireNonNull(listener, "listener"));
+            return this;
         }
 
         /**

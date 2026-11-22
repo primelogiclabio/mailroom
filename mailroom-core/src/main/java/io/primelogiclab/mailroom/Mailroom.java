@@ -2,6 +2,7 @@ package io.primelogiclab.mailroom;
 
 import io.primelogiclab.mailroom.internal.MailroomProperties;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -117,6 +118,36 @@ public interface Mailroom extends AutoCloseable {
      * @since 0.1.0
      */
     static Mailroom fromProperties(Map<String, String> properties, TransportRegistry registry) {
-        return MailroomProperties.create(properties, registry);
+        return MailroomProperties.create(properties, registry, null);
+    }
+
+    /**
+     * Builds a mailroom from properties, finding the transport providers on the classpath, with a listener for
+     * metrics or tracing.
+     *
+     * @param properties the properties, as for {@link #fromProperties(Map)}
+     * @param listener   the listener
+     * @return the mailroom
+     * @throws InvalidConfigException listing every problem
+     * @throws MailroomException      if a provider on the classpath can't be loaded or needs a newer mailroom-core
+     * @since 0.1.0
+     */
+    static Mailroom fromProperties(Map<String, String> properties, MailroomListener listener) {
+        return fromProperties(properties, TransportRegistry.discover(), listener);
+    }
+
+    /**
+     * Builds a mailroom from properties with providers you choose and a listener for metrics or tracing.
+     *
+     * @param properties the properties, as for {@link #fromProperties(Map)}
+     * @param registry   the providers to use
+     * @param listener   the listener
+     * @return the mailroom
+     * @throws InvalidConfigException listing every problem
+     * @since 0.1.0
+     */
+    static Mailroom fromProperties(Map<String, String> properties, TransportRegistry registry,
+            MailroomListener listener) {
+        return MailroomProperties.create(properties, registry, Objects.requireNonNull(listener, "listener"));
     }
 }

@@ -68,6 +68,41 @@ Failures are sorted into one `FailureKind`: `UNAVAILABLE` is retried once and th
 stops unless you turn on `failoverOnUnknownOutcome`. For tests, `mailroom-test` has `InMemoryTransport` and
 `ScriptedTransport`.
 
+## Logging and metrics
+
+mailroom logs through `java.util.logging` to one logger, `io.primelogiclab.mailroom`, so core has no logging
+dependency. SLF4J and Log4j users route it with their JUL bridge (`jul-to-slf4j`, `log4j-jul`).
+
+| Level | What |
+|---|---|
+| `INFO` | each sent email: transport, provider, attempt count and the provider's message id |
+| `WARNING` | each failed send: its `FailureKind`, attempt count and the transports tried; a listener that threw |
+| `FINE` | each attempt and what happens next (retry, next transport, stop); each skipped transport and why |
+
+Log lines never contain a recipient (addresses are masked, such as `p***@example.com`), a subject, a body, a header,
+a secret or an exception's cause.
+
+For metrics or tracing, add a `MailroomListener`. Override only the events you need:
+
+```java
+Mailroom mailroom = Mailroom.builder()
+    .transport("primary", primaryTransport)
+    .listener(new MailroomListener() {
+        @Override
+        public void onAttempt(Email email, Attempt attempt) {
+            registry.timer("mailroom.attempt", "transport", attempt.transportName(),
+                    "outcome", attempt.succeeded() ? "sent" : attempt.failureKind().get().name())
+                .record(attempt.duration());
+        }
+    })
+    .build();
+
+Mailroom fromProps = Mailroom.fromProperties(properties, listener);
+```
+
+Events are `onSkip`, `onAttempt`, `onSuccess` and `onFailure`, called in order on the sending thread, so keep
+listeners quick and thread-safe. An exception from a listener is logged and never changes the send.
+
 ## Getting the snapshots
 
 Artifacts are published to `https://repo.primelogiclab.io`, which can be read without signing in. Add:

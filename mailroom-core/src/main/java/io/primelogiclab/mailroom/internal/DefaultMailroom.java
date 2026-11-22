@@ -5,6 +5,7 @@ import io.primelogiclab.mailroom.Email;
 import io.primelogiclab.mailroom.InvalidEmailException;
 import io.primelogiclab.mailroom.Mailroom;
 import io.primelogiclab.mailroom.MailroomException;
+import io.primelogiclab.mailroom.MailroomListener;
 import io.primelogiclab.mailroom.SendResult;
 import io.primelogiclab.mailroom.spi.MailTransport;
 import java.time.Clock;
@@ -64,11 +65,12 @@ public final class DefaultMailroom implements Mailroom {
      * @param executor                 the caller's executor, or null to create the default one
      * @param clock                    the clock, or null
      * @param defaultFrom              the default sender, or null
+     * @param listeners                the listeners, in the order to call them
      * @return the mailroom
      */
     public static Mailroom create(List<MailTransport> transports, String[] defaultRoute, Duration retryBackoff,
             Duration maxInlineWait, boolean failoverOnUnknownOutcome, Executor executor, Clock clock,
-            Address defaultFrom) {
+            Address defaultFrom, List<MailroomListener> listeners) {
         ExecutorService owned = null;
         Executor effective = executor;
         if (effective == null) {
@@ -78,6 +80,9 @@ public final class DefaultMailroom implements Mailroom {
         Router.Builder b = Router.builder().failoverOnUnknownOutcome(failoverOnUnknownOutcome).executor(effective);
         for (MailTransport transport : transports) {
             b.transport(transport);
+        }
+        for (MailroomListener listener : listeners) {
+            b.listener(listener);
         }
         if (defaultRoute != null) {
             b.defaultRoute(defaultRoute);
