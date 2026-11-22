@@ -1,0 +1,40 @@
+# Intended differences between the public APIs of the Java 21 set and the Java 8 set, read by ApiParityTest.
+# "21 <line>" is only in the Java 21 set, "8 <line>" only in the Java 8 set. When the test fails it prints the
+# exact lines; add one here only for a difference meant to stay, with a comment saying why.
+#
+# Extra API in the Java 21 set doesn't break an app moving up from the Java 8 set; API missing from it would.
+
+[core]
+# Records in the Java 21 set (J-2), final classes with the same accessors in the Java 8 set. A public record's
+# canonical constructor is public too, so each record has one constructor more than its Java 8 twin.
+21 io.primelogiclab.mailroom.Attempt: public final record extends java.lang.Record
+8 io.primelogiclab.mailroom.Attempt: public final class
+21 io.primelogiclab.mailroom.Attempt: public Attempt(java.lang.String, java.lang.String, java.time.Instant, java.time.Duration, java.util.Optional<io.primelogiclab.mailroom.FailureKind>, java.util.OptionalInt, java.util.Optional<java.lang.String>)
+21 io.primelogiclab.mailroom.SendResult: public final record extends java.lang.Record
+8 io.primelogiclab.mailroom.SendResult: public final class
+21 io.primelogiclab.mailroom.SendResult: public SendResult(java.lang.String, java.lang.String, java.util.Optional<java.lang.String>, io.primelogiclab.mailroom.Status, java.time.Instant, java.util.List<io.primelogiclab.mailroom.Attempt>)
+21 io.primelogiclab.mailroom.spi.BatchItemResult: public final record extends java.lang.Record
+8 io.primelogiclab.mailroom.spi.BatchItemResult: public final class
+21 io.primelogiclab.mailroom.spi.BatchItemResult: public BatchItemResult(java.util.Optional<io.primelogiclab.mailroom.SendResult>, java.util.Optional<io.primelogiclab.mailroom.SendFailedException>)
+21 io.primelogiclab.mailroom.spi.Capability: public final record extends java.lang.Record
+8 io.primelogiclab.mailroom.spi.Capability: public final class
+21 io.primelogiclab.mailroom.spi.Capability: public Capability(java.lang.String)
+21 io.primelogiclab.mailroom.spi.Precheck: public final record extends java.lang.Record
+8 io.primelogiclab.mailroom.spi.Precheck: public final class
+21 io.primelogiclab.mailroom.spi.Precheck: public Precheck(java.util.Optional<java.lang.String>)
+21 io.primelogiclab.mailroom.spi.SendContext: public final record extends java.lang.Record
+8 io.primelogiclab.mailroom.spi.SendContext: public final class
+21 io.primelogiclab.mailroom.spi.SendContext: public SendContext(int, java.util.Optional<java.time.Instant>, java.util.concurrent.Executor, java.time.Clock)
+21 io.primelogiclab.mailroom.spi.TransportCapabilities: public final record extends java.lang.Record
+8 io.primelogiclab.mailroom.spi.TransportCapabilities: public final class
+21 io.primelogiclab.mailroom.spi.TransportCapabilities: public TransportCapabilities(java.util.Set<io.primelogiclab.mailroom.spi.Capability>, java.util.Set<java.lang.Class<? extends io.primelogiclab.mailroom.EmailExtension>>, java.util.OptionalInt, java.util.OptionalLong)
+
+# MailroomException is sealed in the Java 21 set (J-2); its four subclasses stay open in both sets.
+21 io.primelogiclab.mailroom.MailroomException: public sealed class extends java.lang.RuntimeException permits io.primelogiclab.mailroom.InvalidConfigException, io.primelogiclab.mailroom.InvalidEmailException, io.primelogiclab.mailroom.NoEligibleTransportException, io.primelogiclab.mailroom.SendFailedException
+8 io.primelogiclab.mailroom.MailroomException: public class extends java.lang.RuntimeException
+
+[http]
+
+[test]
+
+[tck]

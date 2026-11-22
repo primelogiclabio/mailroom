@@ -107,6 +107,30 @@ public final class SendContext {
     }
 
     /**
+     * Two contexts are equal when they have the same attempt number and deadline, and equal executors and clocks.
+     *
+     * @param other the object to compare with
+     * @return true if equal
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof SendContext)) {
+            return false;
+        }
+        SendContext that = (SendContext) other;
+        return attempt == that.attempt && Objects.equals(deadline, that.deadline)
+                && executor.equals(that.executor) && clock.equals(that.clock);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(attempt, deadline, executor, clock);
+    }
+
+    /**
      * Describes the context, such as {@code SendContext[attempt=2, deadline=2026-11-21T12:00:30Z]}.
      *
      * @return a description

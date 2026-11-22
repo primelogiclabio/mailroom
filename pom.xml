@@ -44,6 +44,8 @@
         <module>mailroom-http-java8</module>
         <module>mailroom-test-java8</module>
         <module>mailroom-tck-java8</module>
+        <!-- Build check, never published: the two sets' public APIs match, apart from listed differences. -->
+        <module>mailroom-api-check</module>
     </modules>
 
     <!-- Maven reads the parent before anything it declares, so these entries must be here too. -->
@@ -66,6 +68,7 @@
         <!-- The 2.x line: Jackson 3 needs Java 17. 2.21 is an LTS line. -->
         <jackson.version>2.21.8</jackson.version>
         <build-helper.version>3.8.0</build-helper.version>
+        <dependency-plugin.version>3.10.0</dependency-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -155,6 +158,11 @@
                             </configuration>
                         </execution>
                     </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>${dependency-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>

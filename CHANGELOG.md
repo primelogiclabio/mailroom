@@ -12,6 +12,8 @@ All notable changes to mailroom are listed here. The format follows
   will be the Java 21 set. Tests both sets share moved to `shared-tests/`.
 - Each set is tested on its own JDKs, on mailroom-parent 0.3.0: the Java 8 set on JDK 8 only, the Java 21 set on
   JDK 21 and 25. The `-java8` jars still run on newer JDKs, but apps on Java 21 or later should use the Java 21 set.
+- `BatchItemResult` and `SendContext` in the Java 8 set compare by value (`equals` and `hashCode`), as the Java 21
+  set's records do; they compared by identity.
 
 ### Added
 
@@ -24,6 +26,8 @@ All notable changes to mailroom are listed here. The format follows
   `HttpEngines.load()` falls back to a built-in engine on `java.net.http.HttpClient` (`httpclient`): HTTP/1.1, no
   redirects, the JVM's proxy settings read at each request, no POST re-sent; a failure to connect, resolve, tunnel or
   shake hands is `UNAVAILABLE`, anything after connecting `UNKNOWN_OUTCOME`. `HttpEngines.urlConnection()` stays.
+- A build check, `mailroom-api-check` (never published), that fails when the two sets' public APIs differ in a way
+  `api-differences.txt` doesn't list.
 
 - Module skeleton on mailroom-parent 0.1.0: `mailroom-core`, `mailroom-http`, `mailroom-test` and `mailroom-tck`,
   each with its `Automatic-Module-Name` and a smoke test, built as Java 8 bytecode and tested on JDK 8, 21 and 25.
