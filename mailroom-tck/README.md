@@ -57,8 +57,9 @@ read timeout. Add your provider's error codes as further cases.
 Configure the transport with the `Secret` the contract passes (it reveals `RedactionContract.CANARY_SECRET`); the
 contract sends `RedactionContract.CANARY_EMAIL`. A masked address such as `c***@tck-canary.example.com` is fine.
 `ignoredLoggers()` leaves out loggers the transport can't change, and every one left out is a leak to document. The
-JDK's `HttpURLConnection` is one: it logs every request header, API keys included, at `FINE` on
-`sun.net.www.protocol.http.HttpURLConnection`, so applications should keep that logger at `INFO` or above.
+JDK's `HttpURLConnection` would be one, since it logs every request header, API keys included, at `FINE` on
+`sun.net.www.protocol.http.HttpURLConnection`; mailroom-http's engine sets that logger to `INFO` unless the
+application set it, so transports on that engine don't need to leave it out.
 
 ## Example: an HTTP transport
 
@@ -109,9 +110,6 @@ class Smtp2GoContractsTest {
         protected MailTransport newTransport(Secret secret) { return transport(secret); }
         protected void acceptNextSend() { server.enqueue(StubResponse.status(200).json(SUCCESS)); }
         protected List<FailureCase> failureCases() { return cases(); }
-        protected Set<String> ignoredLoggers() {
-            return Collections.singleton("sun.net.www.protocol.http.HttpURLConnection");
-        }
     }
 
     @Nested

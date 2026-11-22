@@ -29,8 +29,9 @@ import org.junit.jupiter.api.function.Executable;
  * such as {@code c***@tck-canary.example.com} is fine, and the secret may of course go to the provider.
  *
  * <p>Logging outside {@code java.util.logging} (SLF4J, standard out) isn't seen. A logger the transport can't
- * change, such as the JDK's {@code sun.net.www.protocol.http.HttpURLConnection}, which logs request headers at
- * {@code FINE}, can be left out with {@link #ignoredLoggers()}; each one left out is a leak to document.
+ * change, such as a library that logs request headers on its own, can be left out with {@link #ignoredLoggers()};
+ * each one left out is a leak to document. (The JDK's {@code HttpURLConnection} logs headers at {@code FINE};
+ * mailroom-http's engine keeps that logger at {@code INFO}, so it needs no entry.)
  *
  * @since 0.1.0
  */

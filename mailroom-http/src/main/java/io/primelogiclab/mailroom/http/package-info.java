@@ -13,7 +13,11 @@
  *
  * <p><strong>Logging:</strong> nothing here logs header values, but the JDK's {@code HttpURLConnection}, which the
  * default engine uses, logs every request header, credentials included, at {@code FINE} on the
- * {@code sun.net.www.protocol.http.HttpURLConnection} logger. Applications should keep that logger at {@code INFO} or
- * above; transports should say so in their documentation.
+ * {@code java.util.logging} logger {@code sun.net.www.protocol.http.HttpURLConnection}. So, as a deliberate side
+ * effect, the engine sets that one logger to {@code INFO} while its level is inherited (not set by the application),
+ * and sets it again if a logging reconfiguration clears it. Turning on {@code FINE} at the root, or DEBUG through an
+ * SLF4J bridge, then shows no credentials. A level the application set on that logger itself is left alone; at
+ * {@code FINE} or below, one {@code WARNING} on {@code io.primelogiclab.mailroom.http} says that credentials are being
+ * logged.
  */
 package io.primelogiclab.mailroom.http;
