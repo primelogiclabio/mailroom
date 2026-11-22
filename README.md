@@ -9,16 +9,21 @@ release of the core.
 
 > **Status:** early development, no release yet. The Java 8 set works: `mailroom-core-java8`, `mailroom-test-java8`,
 > `mailroom-http-java8` (HTTP engine, JSON, error mapping) and `mailroom-tck-java8` (contract tests and stub server).
-> The Java 21 set, under the unsuffixed names, is being built next, and the first transports in their own repos.
+> In the Java 21 set, under the unsuffixed names, `mailroom-core` and `mailroom-test` work; `mailroom-http` and
+> `mailroom-tck` come next, and the first transports are being built in their own repos.
 > Snapshots are published from `main`.
 
 ## Modules
 
 Every module comes in two sets with the same version, packages and API: unsuffixed artifacts compiled for Java 21,
-and `-java8` twins compiled for Java 8. Today the repo holds the Java 8 set; the Java 21 modules come next.
+and `-java8` twins compiled for Java 8. The Java 21 set implements the same API with records (`SendResult`,
+`Attempt`, `Precheck`, `Capability`, `TransportCapabilities`, `SendContext`, `BatchItemResult`), a sealed
+`MailroomException` hierarchy and virtual threads without reflection.
 
-| Artifact (Java 8 set) | What it holds | Depends on |
+| Artifact | What it holds | Depends on |
 | --- | --- | --- |
+| `mailroom-core` (Java 21) | The same as `mailroom-core-java8` | JDK only |
+| `mailroom-test` (Java 21) | The same as `mailroom-test-java8` | core |
 | `mailroom-core-java8` | The `Email` model, the `Mailroom` sending API, the router and the provider SPI | JDK only |
 | `mailroom-http-java8` | Shared HTTP and JSON plumbing for provider modules (for provider authors, not application API) | core, jackson-core 2.x |
 | `mailroom-test-java8` | `InMemoryTransport` and `ScriptedTransport` for application tests | core |

@@ -34,7 +34,10 @@
     </issueManagement>
 
     <modules>
-        <!-- The Java 8 set: a java8-set file in each module. The Java 21 set comes with J-2 and J-3. -->
+        <!-- The Java 21 set: no java8-set file, so mailroom-parent builds them for Java 21. -->
+        <module>mailroom-core</module>
+        <module>mailroom-test</module>
+        <!-- The Java 8 set: a java8-set file in each module. -->
         <module>mailroom-core-java8</module>
         <module>mailroom-http-java8</module>
         <module>mailroom-test-java8</module>
@@ -69,6 +72,16 @@
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-core</artifactId>
                 <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.primelogiclab.mailroom</groupId>
+                <artifactId>mailroom-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.primelogiclab.mailroom</groupId>
+                <artifactId>mailroom-test</artifactId>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.primelogiclab.mailroom</groupId>
