@@ -51,5 +51,11 @@ All notable changes to mailroom are listed here. The format follows
 - `mailroom-tck`: `StubHttpServer`, a loopback HTTP server on the JDK's `com.sun.net.httpserver` that records each
   request (`RecordedRequest`, whose `toString` never shows header values or the body) and plays scripted
   `StubResponse`s: status, headers and body, a delay, a dropped connection, or a body cut short.
+- `mailroom-http`: `HttpEngine`, found with `HttpEngines.load()` (an engine registered for `ServiceLoader`, else the
+  built-in `HttpURLConnection` one), with `HttpRequest` and `HttpResponse`. Requests are https only, apart from plain
+  http to loopback, and their `toString` never shows header values, the query or the body. Every status comes back as
+  a response. An I/O failure throws `SendFailedException`: `UNAVAILABLE` before the request went out, `UNKNOWN_OUTCOME`
+  after, including a response cut short. The engine follows the JVM proxy settings, never follows redirects and never
+  re-sends a POST.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main
