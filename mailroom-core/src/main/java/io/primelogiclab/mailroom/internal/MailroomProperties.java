@@ -4,6 +4,7 @@ import io.primelogiclab.mailroom.InvalidConfigException;
 import io.primelogiclab.mailroom.InvalidEmailException;
 import io.primelogiclab.mailroom.Mailroom;
 import io.primelogiclab.mailroom.MailroomBuilder;
+import io.primelogiclab.mailroom.MailroomListener;
 import io.primelogiclab.mailroom.TransportRegistry;
 import io.primelogiclab.mailroom.spi.MailTransport;
 import java.time.Duration;
@@ -40,10 +41,12 @@ public final class MailroomProperties {
      *
      * @param properties the properties
      * @param registry   the providers
+     * @param listener   a listener, or null for none
      * @return the mailroom
      * @throws InvalidConfigException listing every problem
      */
-    public static Mailroom create(Map<String, String> properties, TransportRegistry registry) {
+    public static Mailroom create(Map<String, String> properties, TransportRegistry registry,
+            MailroomListener listener) {
         Objects.requireNonNull(properties, "properties");
         Objects.requireNonNull(registry, "registry");
         List<String> problems = new ArrayList<String>();
@@ -119,6 +122,9 @@ public final class MailroomProperties {
         }
         for (MailTransport transport : transports.values()) {
             builder.transport(transport);
+        }
+        if (listener != null) {
+            builder.listener(listener);
         }
         return builder.build();
     }

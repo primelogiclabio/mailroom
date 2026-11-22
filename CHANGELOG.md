@@ -42,5 +42,11 @@ All notable changes to mailroom are listed here. The format follows
   `Mailroom.fromProperties(...)` (`default-from`, `routing.default`, `failover-on-unknown-outcome`, `retry-backoff`,
   `max-inline-wait`, `transports.<name>.*`, every problem reported at once). `sendAsync` runs on a virtual thread per
   send on Java 21 and newer and on a small bounded pool on Java 8.
+- Logging through `java.util.logging` on the `io.primelogiclab.mailroom` logger: each send at `INFO` (transport,
+  attempt count, message id), failures at `WARNING`, attempts and skips at `FINE`, with addresses masked and never a
+  subject, body, header, secret or exception cause.
+- `MailroomListener` for metrics and tracing (`onSkip`, `onAttempt`, `onSuccess`, `onFailure`), added with
+  `MailroomBuilder.listener(...)` or `Mailroom.fromProperties(properties, listener)`; an exception from a listener is
+  logged and ignored.
 
 [Unreleased]: https://github.com/primelogiclabio/mailroom/commits/main

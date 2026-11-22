@@ -25,6 +25,7 @@ public final class MailroomBuilder {
     private boolean failoverOnUnknownOutcome;
     private Executor executor;
     private Clock clock;
+    private final List<MailroomListener> listeners = new ArrayList<MailroomListener>();
 
     MailroomBuilder() {
     }
@@ -160,6 +161,19 @@ public final class MailroomBuilder {
     }
 
     /**
+     * Adds a listener for skips, attempts, successes and failures, such as one that records metrics. Call it again to
+     * add more; they are called in the order added.
+     *
+     * @param listener the listener
+     * @return this builder
+     * @since 0.1.0
+     */
+    public MailroomBuilder listener(MailroomListener listener) {
+        listeners.add(Objects.requireNonNull(listener, "listener"));
+        return this;
+    }
+
+    /**
      * Builds the mailroom.
      *
      * @return the mailroom
@@ -172,6 +186,6 @@ public final class MailroomBuilder {
             throw new IllegalStateException("A Mailroom needs at least one transport");
         }
         return DefaultMailroom.create(transports, defaultRoute, retryBackoff, maxInlineWait,
-                failoverOnUnknownOutcome, executor, clock, defaultFrom);
+                failoverOnUnknownOutcome, executor, clock, defaultFrom, listeners);
     }
 }

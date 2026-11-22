@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.primelogiclab.mailroom.Address;
+import io.primelogiclab.mailroom.Attempt;
 import io.primelogiclab.mailroom.Email;
 import io.primelogiclab.mailroom.FailureKind;
 import io.primelogiclab.mailroom.InvalidConfigException;
 import io.primelogiclab.mailroom.Mailroom;
+import io.primelogiclab.mailroom.MailroomListener;
 import io.primelogiclab.mailroom.SendFailedException;
 import io.primelogiclab.mailroom.SendResult;
 import io.primelogiclab.mailroom.TransportRegistry;
@@ -204,5 +206,42 @@ class FromPropertiesTest {
         assertThatThrownBy(() -> Mailroom.fromProperties(props("transports.primary.type", "smtp2go")))
                 .isInstanceOf(InvalidConfigException.class)
                 .hasMessageContaining("no provider for type 'smtp2go' (found: none)");
+    }
+
+    @Test
+    void takesAListener() {
+        final List<String> events = new ArrayList<String>();
+        MailroomListener listener = new MailroomListener() {
+            @Override
+            public void onAttempt(Email email, Attempt attempt) {
+                events.add("attempt " + attempt.transportName());
+            }
+
+            @Override
+            public void onSuccess(Email email, SendResult result) {
+                events.add("success " + result.transportName());
+            }
+        };
+        try (Mailroom mailroom = Mailroom.fromProperties(props(
+                "default-from", "shop@example.com",
+                "transports.primary.type", "memory"), new TestProviders().registry(), listener)) {
+            mailroom.send(email());
+        }
+        assertThat(events).containsExactly("attempt primary", "success primary");
+    }
+
+    @Test
+    void takesAListenerWithDiscoveredProviders() {
+        assertThatThrownBy(() -> Mailroom.fromProperties(props("transports.primary.type", "smtp2go"),
+                new MailroomListener() { }))
+                .isInstanceOf(InvalidConfigException.class)
+                .hasMessageContaining("no provider for type 'smtp2go' (found: none)");
+    }
+
+    @Test
+    void rejectsANullListener() {
+        assertThatThrownBy(() -> Mailroom.fromProperties(props("transports.primary.type", "memory"),
+                new TestProviders().registry(), null))
+                .isInstanceOf(NullPointerException.class).hasMessage("listener");
     }
 }
