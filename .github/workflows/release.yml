@@ -1,4 +1,4 @@
-# From mailroom-parent 0.1.0 templates/release.yml. Keep it in step with that template.
+# From mailroom-parent 0.3.0 templates/release.yml. Keep it in step with that template.
 name: release
 
 # Push a tag vX.Y.Z on main to release X.Y.Z. The tag must match the POM version without -SNAPSHOT.
@@ -14,10 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      # The Java 8 set's tests run on JDK 8 (a toolchain); the last one, 21, runs Maven.
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: |
+            8
+            21
           cache: maven
           server-id: primelogiclab-releases
           server-username-env-var: REPO_TOKEN_NAME
