@@ -14,6 +14,9 @@ All notable changes to mailroom are listed here. The format follows
   JDK 21 and 25. The `-java8` jars still run on newer JDKs, but apps on Java 21 or later should use the Java 21 set.
 - `BatchItemResult` and `SendContext` in the Java 8 set compare by value (`equals` and `hashCode`), as the Java 21
   set's records do; they compared by identity.
+- An email refuses custom headers whose name starts with `X-Mailroom-`. Transports without native tags or metadata,
+  such as mailroom-smtp2go, carry them as `X-Mailroom-Tags` and `X-Mailroom-Metadata`, so a caller's own header can't
+  clash with them.
 
 ### Added
 

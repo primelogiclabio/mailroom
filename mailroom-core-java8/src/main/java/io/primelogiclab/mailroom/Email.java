@@ -48,7 +48,8 @@ import java.util.Set;
  *   <li>custom headers whose names are printable ASCII without {@code :}, whose values have no line breaks or other
  *       control characters (tab is allowed), and which don't use a name the email sets itself: From, Sender,
  *       Reply-To, To, Cc, Bcc, Subject, Date, Message-ID, MIME-Version, Content-Type, Content-Transfer-Encoding,
- *       Content-ID, Content-Disposition or Return-Path;</li>
+ *       Content-ID, Content-Disposition or Return-Path, and which don't start with {@code X-Mailroom-}, kept for
+ *       the headers transports carry tags and metadata in;</li>
  *   <li>tags and metadata keys of 1 to 64 ASCII letters, digits, {@code _} or {@code -}, and metadata values without
  *       control characters;</li>
  *   <li>an idempotency key of 1 to 256 visible ASCII characters.</li>
@@ -69,6 +70,9 @@ public final class Email {
     private static final Set<String> RESERVED_HEADERS = new HashSet<String>(Arrays.asList(
             "from", "sender", "reply-to", "to", "cc", "bcc", "subject", "date", "message-id", "mime-version",
             "content-type", "content-transfer-encoding", "content-id", "content-disposition", "return-path"));
+
+    /** Transports carry tags and metadata in headers with this prefix, such as {@code X-Mailroom-Tags}. */
+    private static final String TRANSPORT_HEADER_PREFIX = "x-mailroom-";
 
     private final Address from;
     private final List<Address> replyTo;
@@ -761,6 +765,10 @@ public final class Email {
                 }
                 if (RESERVED_HEADERS.contains(name.toLowerCase(Locale.ROOT))) {
                     problems.add("the header '" + name + "' is set by the email itself; use its own field");
+                }
+                if (name.toLowerCase(Locale.ROOT).startsWith(TRANSPORT_HEADER_PREFIX)) {
+                    problems.add("the header '" + name
+                            + "' uses the X-Mailroom- prefix, which transports keep for tags and metadata");
                 }
                 if (Chars.hasControlExceptTab(header.getValue())) {
                     problems.add("the value of header '" + name
