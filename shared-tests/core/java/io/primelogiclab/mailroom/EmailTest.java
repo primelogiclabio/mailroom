@@ -206,6 +206,19 @@ class EmailTest {
         }
 
         @ParameterizedTest
+        @ValueSource(strings = {"X-Mailroom-Tags", "x-mailroom-metadata", "X-MAILROOM-Other"})
+        void rejectsTheTransportsPrefix(String name) {
+            assertThat(problemsOf(minimal().header(name, "x"))).containsExactly("the header '" + name
+                    + "' uses the X-Mailroom- prefix, which transports keep for tags and metadata");
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"X-Mailroom", "X-Mailroomish", "X-Tag-Mailroom-Tags"})
+        void acceptsNamesOutsideThePrefix(String name) {
+            assertThat(minimal().header(name, "x").build().headers()).containsKey(name);
+        }
+
+        @ParameterizedTest
         @ValueSource(strings = {"", "X Bad", "X:Bad", "X-Bäd", "X-Bad\r\n"})
         void rejectsInvalidNames(String name) {
             assertThat(problemsOf(minimal().header(name, "x")))
